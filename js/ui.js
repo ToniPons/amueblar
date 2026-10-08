@@ -1,10 +1,11 @@
 import {
-  ESTANCIAS,
   CATEGORIAS,
   ESTADOS,
   calcPresupuesto,
   lineTotal,
   resumenPorEstancia,
+  groupByTienda,
+  sanitizePhoto,
 } from './db.js';
 
 export function formatEuro(n) {
@@ -30,7 +31,6 @@ export function updateBudget(productos, config = {}) {
   const progress = document.getElementById('budget-progress');
   const progressFill = document.getElementById('budget-progress-fill');
   const progressLabel = document.getElementById('budget-progress-label');
-  const budgetRow = document.getElementById('budget-row');
   const header = document.querySelector('.header-panel');
 
   if (elTotal) elTotal.textContent = formatEuro(totalSeleccionado);
@@ -45,11 +45,8 @@ export function updateBudget(productos, config = {}) {
   if (capCard) capCard.hidden = !hasCap;
   if (remainCard) remainCard.hidden = !hasCap;
   if (setTopeBtn) setTopeBtn.hidden = hasCap;
-  budgetRow?.classList.toggle('has-cap', hasCap);
 
-  if (elCap) {
-    elCap.textContent = hasCap ? formatEuro(tope) : '—';
-  }
+  if (elCap) elCap.textContent = hasCap ? formatEuro(tope) : '—';
   if (elRemain) {
     if (hasCap) {
       const remain = tope - totalSeleccionado;
@@ -71,7 +68,7 @@ export function updateBudget(productos, config = {}) {
       progressFill.classList.toggle('over', over);
       progressLabel.textContent = over
         ? `Te pasas ${formatEuro(totalSeleccionado - tope)}`
-        : `${pct}% del tope usado`;
+        : `${pct}% del tope (incluye comprado)`;
     } else {
       progress.hidden = true;
     }
@@ -80,15 +77,14 @@ export function updateBudget(productos, config = {}) {
   header?.classList.toggle('over-budget', hasCap && totalSeleccionado > tope);
 }
 
-const ESTANCIAS_DEPRECATED = new Set(['Baño', 'Otro']);
-
 /**
  * @param {'estancia'|'categoria'|'estado'} type
  * @param {string} current
  * @param {(value: string) => void} onChange
+ * @param {string[]} [baseList]
  * @param {string[]} [extraValues]
  */
-export function renderChips(type, current, onChange, extraValues = []) {
+export function renderChips(type, current, onChange, baseList = [], extraValues = []) {
   const containerId =
     type === 'estancia'
       ? 'filter-estancia'
@@ -99,13 +95,12 @@ export function renderChips(type, current, onChange, extraValues = []) {
   if (!container) return;
 
   const base =
-    type === 'estancia' ? ESTANCIAS : type === 'categoria' ? CATEGORIAS : ESTADOS;
-  const extras = extraValues.filter(
-    (v) =>
-      v &&
-      !base.includes(v) &&
-      !(type === 'estancia' && ESTANCIAS_DEPRECATED.has(v))
-  );
+    type === 'estancia'
+      ? baseList
+      : type === 'categoria'
+        ? CATEGORIAS
+        : ESTADOS;
+  const extras = extraValues.filter((v) => v && !base.includes(v));
   const items = ['Todos', ...base, ...extras];
 
   container.innerHTML = '';
@@ -147,10 +142,10 @@ export function updateFilterMeta(filteredCount, totalCount, hasActiveFilters) {
 
 /**
  * @param {object[]} productos
- * @param {{ estancia: string, categoria: string, estado: string, listaCompra?: boolean }} filters
+ * @param {{ estancia: string, categoria: string, estado: string, listaCompra?: boolean, query?: string }} filters
  */
 export function filterProductos(productos, filters) {
-  let filtered = productos;
+  let filtered = productos.filter((p) => !p.deletedAt);
   if (filters.listaCompra) {
     filtered = filtered.filter(
       (p) => p.estado === 'Seleccionado' || p.estado === 'Comprado'
@@ -164,6 +159,23 @@ export function filterProductos(productos, filters) {
   }
   if (filters.estado && filters.estado !== 'Todos') {
     filtered = filtered.filter((p) => p.estado === filters.estado);
+  }
+  const q = (filters.query || '').trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter((p) => {
+      const hay = [
+        p.nombre,
+        p.tienda,
+        p.notas,
+        p.enlace,
+        p.medidas,
+        p.estancia,
+        p.categoria,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    });
   }
   return filtered;
 }
@@ -197,18 +209,15 @@ const ESTADO_SHORT = {
   Comprado: 'Comp.',
 };
 
+function safePhotoSrc(value) {
+  return sanitizePhoto(value);
+}
+
 /**
  * @param {object[]} productos
  * @param {object} filters
  * @param {string} sort
- * @param {{
- *   onOpen: (id: string) => void,
- *   onEstado: (id: string, estado: string) => void,
- *   onClearFilters?: () => void,
- *   compareMode?: boolean,
- *   compareIds?: Set<string>,
- *   onToggleCompare?: (id: string) => void
- * }} handlers
+ * @param {object} handlers
  */
 export function renderGrid(productos, filters, sort, handlers) {
   const grid = document.getElementById('product-grid');
@@ -221,9 +230,10 @@ export function renderGrid(productos, filters, sort, handlers) {
     (filters.estancia && filters.estancia !== 'Todos') ||
     (filters.categoria && filters.categoria !== 'Todos') ||
     (filters.estado && filters.estado !== 'Todos') ||
-    filters.listaCompra;
+    filters.listaCompra ||
+    Boolean((filters.query || '').trim());
 
-  updateFilterMeta(filtered.length, productos.length, Boolean(hasFilters));
+  updateFilterMeta(filtered.length, productos.filter((p) => !p.deletedAt).length, Boolean(hasFilters));
   grid.innerHTML = '';
 
   if (filtered.length === 0) {
@@ -232,7 +242,7 @@ export function renderGrid(productos, filters, sort, handlers) {
     if (hasFilters) {
       empty.innerHTML = `
         <h2>Nada con estos filtros</h2>
-        <p>Prueba otra combinación o limpia los filtros.</p>
+        <p>Prueba otra búsqueda o limpia los filtros.</p>
         <button type="button" class="btn btn-secondary" id="empty-clear">Limpiar filtros</button>
       `;
       empty.querySelector('#empty-clear')?.addEventListener('click', () => {
@@ -241,10 +251,15 @@ export function renderGrid(productos, filters, sort, handlers) {
     } else {
       empty.innerHTML = `
         <h2>Sin muebles aún</h2>
-        <p>Pulsa el botón + abajo a la derecha para añadir el primero desde la tienda.</p>
+        <p>Pulsa el botón + abajo a la derecha para añadir el primero.</p>
       `;
     }
     grid.appendChild(empty);
+    return;
+  }
+
+  if (filters.listaCompra) {
+    renderListaCompra(grid, filtered, handlers);
     return;
   }
 
@@ -259,17 +274,16 @@ export function renderGrid(productos, filters, sort, handlers) {
     const qty = Math.max(1, Number(p.cantidad) || 1);
     const total = lineTotal(p);
     const priceLabel =
-      qty > 1
-        ? `${formatEuro(p.precio)} ×${qty}`
-        : formatEuro(p.precio);
+      qty > 1 ? `${formatEuro(p.precio)} ×${qty}` : formatEuro(p.precio);
 
     card.setAttribute(
       'aria-label',
       `${p.nombre || 'Sin nombre'}, ${formatEuro(total)}, ${p.estado}`
     );
 
-    const photoHtml = p.fotoMueble
-      ? `<img src="${p.fotoMueble}" alt="" loading="lazy">`
+    const src = safePhotoSrc(p.fotoMueble);
+    const photoHtml = src
+      ? `<img src="${escapeAttr(src)}" alt="" loading="lazy">`
       : `<div class="placeholder">Sin foto</div>`;
 
     const compareChecked = handlers.compareIds?.has(p.id);
@@ -347,6 +361,66 @@ export function renderGrid(productos, filters, sort, handlers) {
 }
 
 /**
+ * @param {HTMLElement} grid
+ * @param {object[]} productos
+ * @param {object} handlers
+ */
+function renderListaCompra(grid, productos, handlers) {
+  const groups = groupByTienda(productos);
+  const wrap = document.createElement('div');
+  wrap.className = 'lista-compra';
+
+  for (const group of groups) {
+    const section = document.createElement('section');
+    section.className = 'lista-group';
+    const sum = group.items.reduce((acc, p) => acc + lineTotal(p), 0);
+    section.innerHTML = `
+      <div class="lista-group-head">
+        <h3>${escapeHtml(group.tienda)}</h3>
+        <span>${formatEuro(sum)}</span>
+      </div>
+    `;
+    const ul = document.createElement('ul');
+    ul.className = 'lista-items';
+    for (const p of group.items) {
+      const li = document.createElement('li');
+      li.className = `lista-item${p.estado === 'Comprado' ? ' done' : ''}`;
+      li.innerHTML = `
+        <button type="button" class="lista-check" aria-label="Marcar comprado" data-id="${escapeAttr(p.id)}">
+          ${p.estado === 'Comprado' ? '✓' : ''}
+        </button>
+        <button type="button" class="lista-main" data-open="${escapeAttr(p.id)}">
+          <span class="lista-name">${escapeHtml(p.nombre || 'Sin nombre')}</span>
+          <span class="lista-meta">${formatEuro(lineTotal(p))} · ${escapeHtml(p.estancia || '')}</span>
+        </button>
+      `;
+      ul.appendChild(li);
+    }
+    section.appendChild(ul);
+    wrap.appendChild(section);
+  }
+
+  wrap.querySelectorAll('.lista-check').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = /** @type {HTMLElement} */ (btn).dataset.id;
+      if (!id) return;
+      const p = productos.find((x) => x.id === id);
+      if (!p) return;
+      const next = p.estado === 'Comprado' ? 'Seleccionado' : 'Comprado';
+      handlers.onEstado(id, next);
+    });
+  });
+  wrap.querySelectorAll('[data-open]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = /** @type {HTMLElement} */ (btn).dataset.open;
+      if (id) handlers.onOpen(id);
+    });
+  });
+
+  grid.appendChild(wrap);
+}
+
+/**
  * @param {object[]} productos
  * @param {(estancia: string) => void} [onSelect]
  */
@@ -388,7 +462,7 @@ export function renderCompare(productos, ids) {
   const el = document.getElementById('compare-grid');
   if (!el) return;
   const items = ids
-    .map((id) => productos.find((p) => p.id === id))
+    .map((id) => productos.find((p) => p.id === id && !p.deletedAt))
     .filter(Boolean)
     .slice(0, 3);
 
@@ -400,8 +474,9 @@ export function renderCompare(productos, ids) {
   el.innerHTML = items
     .map((p) => {
       const qty = Math.max(1, Number(p.cantidad) || 1);
-      const photo = p.fotoMueble
-        ? `<img src="${p.fotoMueble}" alt="">`
+      const src = safePhotoSrc(p.fotoMueble);
+      const photo = src
+        ? `<img src="${escapeAttr(src)}" alt="">`
         : `<div class="placeholder">Sin foto</div>`;
       return `
         <article class="compare-card">
@@ -413,6 +488,7 @@ export function renderCompare(productos, ids) {
             <li><strong>Medidas</strong> ${escapeHtml(p.medidas || '—')}</li>
             <li><strong>Estancia</strong> ${escapeHtml(p.estancia || '—')}</li>
             <li><strong>Estado</strong> ${escapeHtml(p.estado || '—')}</li>
+            <li><strong>Enlace</strong> ${p.enlace ? `<a href="${escapeAttr(p.enlace)}" target="_blank" rel="noopener">Abrir</a>` : '—'}</li>
             <li><strong>Notas</strong> ${escapeHtml(p.notas || '—')}</li>
           </ul>
         </article>`;
@@ -438,11 +514,12 @@ export function linkifyText(text) {
 export function buildShareText(productos, config) {
   const { totalSeleccionado, gastoReal } = calcPresupuesto(productos);
   const lista = productos.filter(
-    (p) => p.estado === 'Seleccionado' || p.estado === 'Comprado'
+    (p) =>
+      !p.deletedAt && (p.estado === 'Seleccionado' || p.estado === 'Comprado')
   );
   const lines = [
     'Amueblar — resumen mudanza',
-    `Seleccionado: ${formatEuro(totalSeleccionado)}`,
+    `Seleccionado (incluye comprado): ${formatEuro(totalSeleccionado)}`,
     `Comprado: ${formatEuro(gastoReal)}`,
   ];
   if (config?.presupuestoTope != null) {
@@ -463,15 +540,62 @@ export function buildShareText(productos, config) {
 }
 
 /**
- * @param {string} message
+ * @param {{ stats: object, samples: {action:string,name:string}[] }} plan
  */
-export function showToast(message) {
+export function renderMergePreview(plan) {
+  const el = document.getElementById('merge-preview');
+  if (!el) return;
+  const s = plan.stats;
+  el.innerHTML = `
+    <div class="merge-stats">
+      <span>+${s.added} nuevos</span>
+      <span>~${s.updated} actualiz.</span>
+      <span>−${s.deleted || 0} borrados</span>
+      <span>=${s.kept} iguales</span>
+      ${s.softLinked ? `<span>🔗${s.softLinked} unidos</span>` : ''}
+      ${s.restored ? `<span>↩${s.restored} rest.</span>` : ''}
+    </div>
+    ${
+      plan.samples?.length
+        ? `<ul class="merge-samples">${plan.samples
+            .map(
+              (x) =>
+                `<li><strong>${escapeHtml(x.action)}</strong> ${escapeHtml(x.name)}</li>`
+            )
+            .join('')}</ul>`
+        : ''
+    }
+  `;
+}
+
+/**
+ * @param {string} message
+ * @param {{ actionLabel?: string, onAction?: () => void, duration?: number }} [opts]
+ */
+export function showToast(message, opts = {}) {
   const toast = document.getElementById('toast');
   if (!toast) return;
-  toast.textContent = message;
-  toast.classList.add('show');
   clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => toast.classList.remove('show'), 2400);
+  toast.className = 'toast show';
+  toast.innerHTML = '';
+  const text = document.createElement('span');
+  text.textContent = message;
+  toast.appendChild(text);
+  if (opts.actionLabel && opts.onAction) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = opts.actionLabel;
+    btn.addEventListener('click', () => {
+      toast.classList.remove('show');
+      opts.onAction?.();
+    });
+    toast.appendChild(btn);
+  }
+  showToast._timer = setTimeout(
+    () => toast.classList.remove('show'),
+    opts.duration ?? (opts.actionLabel ? 5600 : 2400)
+  );
 }
 
 /** @type {ReturnType<typeof setTimeout>|undefined} */

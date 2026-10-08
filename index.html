@@ -26,28 +26,20 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Syne:wght@700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              display: ['Syne', 'system-ui', 'sans-serif'],
-              body: ['Figtree', 'system-ui', 'sans-serif'],
-            },
-            colors: {
-              ink: '#1c2421',
-              accent: '#1b6b4a',
-              oak: '#a67c52',
-            },
-          },
-        },
-      };
-    </script>
     <link rel="stylesheet" href="./css/app.css" />
   </head>
   <body>
     <div class="app-shell">
+      <div id="install-banner" class="sys-banner" hidden>
+        <p>Instala Amueblar en el móvil: menú del navegador → <strong>Añadir a pantalla de inicio</strong>.</p>
+        <button type="button" class="banner-dismiss" id="install-dismiss" aria-label="Cerrar">×</button>
+      </div>
+      <div id="backup-banner" class="sys-banner warn" hidden>
+        <p id="backup-banner-text">Hace tiempo que no exportas un backup.</p>
+        <button type="button" class="btn btn-sm btn-secondary" id="backup-banner-go">Ajustes</button>
+        <button type="button" class="banner-dismiss" id="backup-dismiss" aria-label="Cerrar">×</button>
+      </div>
+
       <div class="sticky-top">
         <header class="header-panel" aria-label="Presupuesto">
           <div class="brand-row">
@@ -70,8 +62,8 @@
           </div>
 
           <div class="budget-row" id="budget-row">
-            <div class="budget-card">
-              <div class="label">Seleccionado</div>
+            <div class="budget-card" title="Incluye seleccionado y comprado">
+              <div class="label">Al tope</div>
               <div class="value" id="budget-total">0,00 €</div>
             </div>
             <div class="budget-card real">
@@ -87,6 +79,9 @@
               <div class="value" id="budget-remain">—</div>
             </div>
           </div>
+          <p class="budget-help">
+            «Al tope» = seleccionado + comprado (lo que cuenta contra el presupuesto).
+          </p>
 
           <button type="button" class="budget-set-tope" id="btn-set-tope" hidden>
             Definir tope de presupuesto
@@ -101,6 +96,16 @@
         </header>
 
         <section class="filters" aria-label="Filtros">
+          <div class="search-row">
+            <label class="sr-only" for="search-input">Buscar</label>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Buscar nombre, tienda, notas…"
+              autocomplete="off"
+            />
+          </div>
+
           <div class="filter-row">
             <span class="filter-label">Estancia</span>
             <div id="filter-estancia" class="chip-scroll" role="listbox" aria-label="Estancia"></div>
@@ -143,7 +148,7 @@
           </div>
 
           <div class="mode-banner" id="lista-banner" hidden>
-            Vista lista de la compra (seleccionado + comprado)
+            Lista de la compra · agrupada por tienda · toca ✓ para marcar comprado
           </div>
 
           <div class="compare-bar" id="compare-bar" hidden>
@@ -195,6 +200,7 @@
                 <small>Toca para foto</small>
               </span>
               <span class="photo-slot-change">Cambiar</span>
+              <button type="button" class="photo-clear" id="clear-mueble" hidden>Quitar</button>
               <input id="input-mueble" type="file" accept="image/*" capture="environment" />
             </label>
             <label class="photo-slot" id="slot-etiqueta">
@@ -204,6 +210,7 @@
                 <small>Opcional</small>
               </span>
               <span class="photo-slot-change">Cambiar</span>
+              <button type="button" class="photo-clear" id="clear-etiqueta" hidden>Quitar</button>
               <input id="input-etiqueta" type="file" accept="image/*" capture="environment" />
             </label>
           </div>
@@ -242,12 +249,22 @@
           <div class="form-group">
             <label for="field-estancia">Estancia</label>
             <select id="field-estancia"></select>
-            <p class="room-hint" id="room-measure-hint" hidden></p>
           </div>
 
           <div class="form-group full-only">
-            <label for="field-medidas">Medidas producto</label>
+            <label for="field-medidas">Medidas (opcional)</label>
             <input id="field-medidas" type="text" placeholder="140x84x75 cm" autocomplete="off" />
+          </div>
+
+          <div class="form-group full-only">
+            <label for="field-enlace">Enlace ficha tienda</label>
+            <input
+              id="field-enlace"
+              type="url"
+              placeholder="https://…"
+              inputmode="url"
+              autocomplete="off"
+            />
           </div>
 
           <div class="form-group full-only">
@@ -261,8 +278,8 @@
           </div>
 
           <div class="form-group full-only">
-            <label for="field-notas">Notas / enlace / referencia</label>
-            <textarea id="field-notas" rows="3" placeholder="Pasillo B, URL, falta tornillería…"></textarea>
+            <label for="field-notas">Notas / referencia</label>
+            <textarea id="field-notas" rows="3" placeholder="Pasillo B, falta tornillería…"></textarea>
           </div>
 
           <div class="btn-row sticky-actions">
@@ -290,7 +307,7 @@
       </div>
     </div>
 
-    <!-- Resumen por estancia -->
+    <!-- Resumen -->
     <div class="overlay" id="resumen-overlay" aria-hidden="true" role="presentation">
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="resumen-title" tabindex="-1">
         <div class="sheet-top">
@@ -340,17 +357,26 @@
             placeholder="Sin tope"
             inputmode="decimal"
           />
-          <p class="field-help">Déjalo vacío si no quieres límite.</p>
+          <p class="field-help">Vacío = sin límite. El sync respeta el tope más reciente.</p>
         </div>
 
-        <h3 class="settings-subtitle">Medidas de cada estancia</h3>
-        <p class="step-hint">Ej. “3,20 × 4,10 m” — se muestran al elegir esa estancia.</p>
-        <div id="settings-medidas" class="settings-medidas"></div>
+        <h3 class="settings-subtitle">Estancias</h3>
+        <p class="step-hint">Añade o quita habitaciones de la lista.</p>
+        <div id="settings-estancias" class="settings-estancias"></div>
+        <div class="btn-row">
+          <input id="new-estancia" type="text" placeholder="Nueva estancia" autocomplete="off" />
+          <button type="button" class="btn btn-secondary" id="btn-add-estancia">Añadir</button>
+        </div>
 
         <h3 class="settings-subtitle">Sincronizar con pareja</h3>
+        <ol class="sync-steps">
+          <li>Tú: <strong>Enviar sync</strong> (sin fotos)</li>
+          <li>Pareja: <strong>Pegar sync</strong> o importar → Fusionar</li>
+          <li>Pareja: <strong>Enviar sync</strong></li>
+          <li>Tú: <strong>Pegar sync</strong> → Fusionar</li>
+        </ol>
         <p class="step-hint">
-          Sync <strong>ligero</strong> (sin fotos). Se une por ID y gana lo más reciente.
-          Las fotos de cada móvil se conservan.
+          Se unen por ID (y por nombre+tienda+precio si coinciden). Los borrados también se propagan.
         </p>
         <div class="btn-row">
           <button type="button" class="btn btn-primary" id="btn-sync-send">Enviar sync</button>
@@ -358,6 +384,7 @@
         </div>
 
         <h3 class="settings-subtitle">Archivo</h3>
+        <p class="step-hint" id="last-backup-label">Último backup: —</p>
         <div class="form-group">
           <label for="export-filename">Nombre al exportar</label>
           <input
@@ -367,7 +394,6 @@
             autocomplete="off"
             spellcheck="false"
           />
-          <p class="field-help">Se añade .json si falta.</p>
         </div>
         <div class="btn-row">
           <button type="button" class="btn btn-secondary" id="btn-export-sync">Exportar sync</button>
@@ -379,8 +405,10 @@
 
         <div class="import-choice" id="import-choice" hidden>
           <p class="step-hint" id="import-choice-meta"></p>
+          <div id="merge-preview" class="merge-preview"></div>
           <p class="step-hint">
-            <strong>Fusionar</strong> une sin borrar. <strong>Reemplazar</strong> borra lo local.
+            <strong>Fusionar</strong> une sin borrar lo demás. <strong>Reemplazar</strong> borra lo
+            local (antes se guarda un backup automático).
           </p>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="btn-import-merge">Fusionar</button>
@@ -392,13 +420,13 @@
         <div class="btn-row">
           <button type="button" class="btn btn-secondary" id="btn-share">Compartir resumen texto</button>
         </div>
-        <div class="btn-row">
-          <button type="button" class="btn btn-secondary" id="settings-done">Guardar y cerrar</button>
+        <div class="btn-row sticky-actions">
+          <button type="button" class="btn btn-secondary" id="settings-cancel">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="settings-done">Guardar</button>
         </div>
       </div>
     </div>
 
-    <!-- Fuera del sheet: en iOS/Android el file picker falla dentro de modales con transform -->
     <input
       id="import-file"
       class="file-input-host"

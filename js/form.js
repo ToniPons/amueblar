@@ -1,12 +1,13 @@
 import {
-  ESTANCIAS,
   CATEGORIAS,
   ESTADOS,
   TIENDAS_PRESET,
+  ESTANCIAS_DEFAULT,
   addProducto,
   updateProducto,
   getProducto,
   deleteProducto,
+  restoreProducto,
   duplicateProducto,
   lineTotal,
 } from './db.js';
@@ -25,7 +26,7 @@ const QUICK_MODE_KEY = 'amueblar-quick-mode';
  * @typedef {object} FormCallbacks
  * @property {() => Promise<void>|void} onSaved
  * @property {() => string[]} [getRecentStores]
- * @property {(estancia: string) => string} [getRoomMeasure]
+ * @property {() => string[]} [getEstancias]
  */
 
 /**
@@ -51,7 +52,6 @@ export function initForm(callbacks) {
     document.getElementById('field-quick-mode')
   );
   const tiendaChips = document.getElementById('tienda-chips');
-  const roomHint = document.getElementById('room-measure-hint');
   const estanciaSelect = /** @type {HTMLSelectElement} */ (
     document.getElementById('field-estancia')
   );
@@ -59,28 +59,39 @@ export function initForm(callbacks) {
   let fotoMueble = /** @type {string|null} */ (null);
   let fotoEtiqueta = /** @type {string|null} */ (null);
   let quickMode = false;
+  let dirty = false;
+  let snapshot = '';
 
-  fillSelect(estanciaSelect, ESTANCIAS);
-  fillSelect(
-    /** @type {HTMLSelectElement} */ (document.getElementById('field-categoria')),
-    CATEGORIAS
-  );
-  fillSelect(
-    /** @type {HTMLSelectElement} */ (document.getElementById('field-estado')),
-    ESTADOS,
-    'Candidato'
-  );
+  function estancias() {
+    const list = callbacks.getEstancias?.() || ESTANCIAS_DEFAULT;
+    return list.length ? list : ESTANCIAS_DEFAULT;
+  }
+
+  function markDirty() {
+    dirty = true;
+  }
+
+  function currentSnapshot() {
+    return JSON.stringify({
+      ...readPayload(),
+      fotoMueble,
+      fotoEtiqueta,
+    });
+  }
 
   function setPreview(imgEl, slotEl, dataUrl) {
     if (!imgEl || !slotEl) return;
+    const clearBtn = slotEl.querySelector('.photo-clear');
     if (dataUrl) {
       imgEl.src = dataUrl;
       imgEl.hidden = false;
       slotEl.classList.add('has-image');
+      if (clearBtn) /** @type {HTMLElement} */ (clearBtn).hidden = false;
     } else {
       imgEl.removeAttribute('src');
       imgEl.hidden = true;
       slotEl.classList.remove('has-image');
+      if (clearBtn) /** @type {HTMLElement} */ (clearBtn).hidden = true;
     }
   }
 
@@ -140,21 +151,9 @@ export function initForm(callbacks) {
         );
         input.value = t;
         renderTiendaChips(t);
+        markDirty();
       });
       tiendaChips.appendChild(btn);
-    }
-  }
-
-  function updateRoomHint() {
-    if (!roomHint) return;
-    const estancia = estanciaSelect.value;
-    const measure = callbacks.getRoomMeasure?.(estancia) || '';
-    if (measure) {
-      roomHint.hidden = false;
-      roomHint.textContent = `Hueco en ${estancia}: ${measure}`;
-    } else {
-      roomHint.hidden = true;
-      roomHint.textContent = '';
     }
   }
 
@@ -178,7 +177,7 @@ export function initForm(callbacks) {
       ESTADOS,
       'Candidato'
     );
-    fillSelect(estanciaSelect, ESTANCIAS);
+    fillSelect(estanciaSelect, estancias());
     /** @type {HTMLInputElement} */ (document.getElementById('field-cantidad')).value =
       '1';
     if (deleteRow) deleteRow.hidden = true;
@@ -187,15 +186,15 @@ export function initForm(callbacks) {
     if (quickToggle) quickToggle.checked = preferQuick;
     applyQuickMode(preferQuick);
     renderTiendaChips('');
-    updateRoomHint();
     updateLineTotal();
+    dirty = false;
+    snapshot = currentSnapshot();
   }
 
   function estanciaOptions(current) {
-    if (current && !ESTANCIAS.includes(current)) {
-      return [...ESTANCIAS, current];
-    }
-    return ESTANCIAS;
+    const base = estancias();
+    if (current && !base.includes(current)) return [...base, current];
+    return base;
   }
 
   /**
@@ -216,6 +215,8 @@ export function initForm(callbacks) {
         producto.tienda || '';
       /** @type {HTMLInputElement} */ (document.getElementById('field-medidas')).value =
         producto.medidas || '';
+      /** @type {HTMLInputElement} */ (document.getElementById('field-enlace')).value =
+        producto.enlace || '';
       /** @type {HTMLTextAreaElement} */ (document.getElementById('field-notas')).value =
         producto.notas || '';
       fillSelect(estanciaSelect, estanciaOptions(producto.estancia), producto.estancia);
@@ -236,15 +237,20 @@ export function initForm(callbacks) {
       if (deleteRow) deleteRow.hidden = false;
       if (duplicateRow) duplicateRow.hidden = false;
       renderTiendaChips(producto.tienda || '');
-      updateRoomHint();
       updateLineTotal();
     } else if (titleEl) {
       titleEl.textContent = 'Añadir mueble';
     }
+    dirty = false;
+    snapshot = currentSnapshot();
     setOverlayOpen('form-overlay', true, { focusSelector: '#field-nombre' });
   }
 
-  function closeForm() {
+  function tryCloseForm() {
+    const changed = dirty || currentSnapshot() !== snapshot;
+    if (changed && !confirm('¿Descartar los cambios? Se perderá lo no guardado.')) {
+      return;
+    }
     setOverlayOpen('form-overlay', false);
     resetForm();
   }
@@ -258,12 +264,12 @@ export function initForm(callbacks) {
 
     const qty = Math.max(1, Number(producto.cantidad) || 1);
     const hero = producto.fotoMueble
-      ? `<div class="detail-hero"><img src="${producto.fotoMueble}" alt=""></div>`
+      ? `<div class="detail-hero"><img src="${escape(producto.fotoMueble)}" alt=""></div>`
       : `<div class="detail-hero" style="display:grid;place-items:center;color:var(--ink-muted)">Sin foto</div>`;
     const label = producto.fotoEtiqueta
-      ? `<div class="detail-label"><img src="${producto.fotoEtiqueta}" alt="Etiqueta"></div>`
+      ? `<div class="detail-label"><img src="${escape(producto.fotoEtiqueta)}" alt="Etiqueta"></div>`
       : '';
-    const room = callbacks.getRoomMeasure?.(producto.estancia) || '';
+    const enlace = (producto.enlace || '').trim();
 
     detailContent.innerHTML = `
       ${hero}
@@ -280,11 +286,11 @@ export function initForm(callbacks) {
         <div class="detail-meta-row"><dt>Categoría</dt><dd>${escape(producto.categoria || '—')}</dd></div>
         <div class="detail-meta-row"><dt>Medidas</dt><dd>${escape(producto.medidas || '—')}</dd></div>
         <div class="detail-meta-row"><dt>Cantidad</dt><dd>${qty}</dd></div>
-        ${
-          room
-            ? `<div class="detail-meta-row"><dt>Hueco estancia</dt><dd>${escape(room)}</dd></div>`
-            : ''
-        }
+        <div class="detail-meta-row"><dt>Enlace</dt><dd>${
+          enlace
+            ? `<a href="${escape(enlace)}" target="_blank" rel="noopener noreferrer">Abrir ficha</a>`
+            : '—'
+        }</dd></div>
       </dl>
       ${
         producto.notas
@@ -322,11 +328,21 @@ export function initForm(callbacks) {
       await callbacks.onSaved();
     });
     document.getElementById('detail-delete')?.addEventListener('click', async () => {
-      if (!confirm('¿Eliminar este producto? No se puede deshacer.')) return;
-      await deleteProducto(producto.id);
+      if (!confirm('¿Eliminar este producto?')) return;
+      const snapshotProd = await deleteProducto(producto.id);
       closeDetail();
-      showToast('Producto eliminado');
       await callbacks.onSaved();
+      showToast('Producto eliminado', {
+        actionLabel: 'Deshacer',
+        duration: 5600,
+        onAction: async () => {
+          if (snapshotProd) {
+            await restoreProducto(snapshotProd);
+            await callbacks.onSaved();
+            showToast('Producto restaurado');
+          }
+        },
+      });
     });
     document.getElementById('detail-estado')?.addEventListener('change', async (ev) => {
       const estado = /** @type {HTMLSelectElement} */ (ev.target).value;
@@ -372,6 +388,10 @@ export function initForm(callbacks) {
         ? ''
         : /** @type {HTMLInputElement} */ (document.getElementById('field-medidas'))
             .value.trim(),
+      enlace: quickMode
+        ? ''
+        : /** @type {HTMLInputElement} */ (document.getElementById('field-enlace'))
+            .value.trim(),
       notas: quickMode
         ? ''
         : /** @type {HTMLTextAreaElement} */ (document.getElementById('field-notas'))
@@ -385,7 +405,7 @@ export function initForm(callbacks) {
         ? 'Candidato'
         : /** @type {HTMLSelectElement} */ (document.getElementById('field-estado')).value,
       fotoMueble,
-      fotoEtiqueta: quickMode ? fotoEtiqueta : fotoEtiqueta,
+      fotoEtiqueta,
     };
   }
 
@@ -395,6 +415,7 @@ export function initForm(callbacks) {
     fotoMueble = await fileToDataUrl(file);
     setPreview(mueblePreview, slotMueble, fotoMueble);
     inputMueble.value = '';
+    markDirty();
   });
 
   inputEtiqueta.addEventListener('change', async () => {
@@ -403,16 +424,39 @@ export function initForm(callbacks) {
     fotoEtiqueta = await fileToDataUrl(file);
     setPreview(etiquetaPreview, slotEtiqueta, fotoEtiqueta);
     inputEtiqueta.value = '';
+    markDirty();
+  });
+
+  document.getElementById('clear-mueble')?.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    fotoMueble = null;
+    setPreview(mueblePreview, slotMueble, null);
+    markDirty();
+  });
+  document.getElementById('clear-etiqueta')?.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    fotoEtiqueta = null;
+    setPreview(etiquetaPreview, slotEtiqueta, null);
+    markDirty();
   });
 
   quickToggle?.addEventListener('change', () => {
     applyQuickMode(Boolean(quickToggle.checked), true);
+    markDirty();
   });
 
-  document.getElementById('field-precio')?.addEventListener('input', updateLineTotal);
-  document.getElementById('field-cantidad')?.addEventListener('input', updateLineTotal);
-
-  estanciaSelect.addEventListener('change', updateRoomHint);
+  document.getElementById('field-precio')?.addEventListener('input', () => {
+    updateLineTotal();
+    markDirty();
+  });
+  document.getElementById('field-cantidad')?.addEventListener('input', () => {
+    updateLineTotal();
+    markDirty();
+  });
+  form.addEventListener('input', markDirty);
+  form.addEventListener('change', markDirty);
 
   document.getElementById('field-tienda')?.addEventListener('input', (ev) => {
     renderTiendaChips(/** @type {HTMLInputElement} */ (ev.target).value.trim());
@@ -435,52 +479,69 @@ export function initForm(callbacks) {
         await updateProducto({
           ...existing,
           ...payload,
-          // En modo rápido al editar, conservar campos ocultos
           medidas: quickMode ? existing?.medidas || '' : payload.medidas,
+          enlace: quickMode ? existing?.enlace || '' : payload.enlace,
           notas: quickMode ? existing?.notas || '' : payload.notas,
           categoria: quickMode ? existing?.categoria || 'Mueble' : payload.categoria,
           estado: quickMode ? existing?.estado || 'Candidato' : payload.estado,
           fechaCreacion: existing?.fechaCreacion || new Date().toISOString(),
+          deletedAt: null,
         });
         showToast('Producto actualizado');
       } else {
         await addProducto(payload);
         showToast('Producto guardado');
       }
-      closeForm();
+      dirty = false;
+      setOverlayOpen('form-overlay', false);
+      resetForm();
       await callbacks.onSaved();
     } catch (err) {
       console.error(err);
-      showToast('Error al guardar');
+      showToast(/** @type {Error} */ (err)?.message || 'Error al guardar');
     } finally {
       submitBtn.disabled = false;
     }
   });
 
-  document.getElementById('form-cancel')?.addEventListener('click', closeForm);
-  document.getElementById('form-close')?.addEventListener('click', closeForm);
+  document.getElementById('form-cancel')?.addEventListener('click', tryCloseForm);
+  document.getElementById('form-close')?.addEventListener('click', tryCloseForm);
   document.getElementById('detail-close-x')?.addEventListener('click', closeDetail);
   document.getElementById('form-delete')?.addEventListener('click', async () => {
     const id = idInput.value;
     if (!id) return;
-    if (!confirm('¿Eliminar este producto? No se puede deshacer.')) return;
-    await deleteProducto(id);
-    closeForm();
-    showToast('Producto eliminado');
+    if (!confirm('¿Eliminar este producto?')) return;
+    const snapshotProd = await deleteProducto(id);
+    dirty = false;
+    setOverlayOpen('form-overlay', false);
+    resetForm();
     await callbacks.onSaved();
+    showToast('Producto eliminado', {
+      actionLabel: 'Deshacer',
+      duration: 5600,
+      onAction: async () => {
+        if (snapshotProd) {
+          await restoreProducto(snapshotProd);
+          await callbacks.onSaved();
+          showToast('Producto restaurado');
+        }
+      },
+    });
   });
   document.getElementById('form-duplicate')?.addEventListener('click', async () => {
     const id = idInput.value;
     if (!id) return;
     await duplicateProducto(id);
-    closeForm();
+    dirty = false;
+    setOverlayOpen('form-overlay', false);
+    resetForm();
     showToast('Producto duplicado');
     await callbacks.onSaved();
   });
   document.getElementById('fab-add')?.addEventListener('click', () => openForm());
 
   overlay?.addEventListener('click', (ev) => {
-    if (ev.target === overlay) closeForm();
+    if (ev.target === overlay) tryCloseForm();
   });
   detailOverlay?.addEventListener('click', (ev) => {
     if (ev.target === detailOverlay) closeDetail();
@@ -488,9 +549,9 @@ export function initForm(callbacks) {
 
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
-    if (overlay?.classList.contains('open')) closeForm();
+    if (overlay?.classList.contains('open')) tryCloseForm();
     else if (detailOverlay?.classList.contains('open')) closeDetail();
   });
 
-  return { openForm, openDetail, closeForm, closeDetail };
+  return { openForm, openDetail, closeForm: tryCloseForm, closeDetail };
 }

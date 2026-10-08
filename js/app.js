@@ -8,7 +8,8 @@ import {
   exportBackup,
   importBackup,
   parseBackupPayload,
-  ESTANCIAS,
+  planMerge,
+  ESTANCIAS_DEFAULT,
 } from './db.js';
 import {
   renderChips,
@@ -18,6 +19,7 @@ import {
   setOverlayOpen,
   renderResumenEstancias,
   renderCompare,
+  renderMergePreview,
   buildShareText,
 } from './ui.js';
 import { initForm } from './form.js';
@@ -27,26 +29,43 @@ const filters = {
   categoria: 'Todos',
   estado: 'Todos',
   listaCompra: false,
+  query: '',
 };
 
 /** @type {'fecha'|'precio-asc'|'precio-desc'|'nombre'} */
 let sort = 'fecha';
 /** @type {object[]} */
 let productos = [];
-/** @type {{ id: string, presupuestoTope: number|null, medidasEstancia: Record<string, string> }} */
-let config = { id: 'app', presupuestoTope: null, medidasEstancia: {} };
+/** @type {{ id: string, presupuestoTope: number|null, presupuestoTopeUpdatedAt: string|null, estancias: string[], lastBackupAt: string|null }} */
+let config = {
+  id: 'app',
+  presupuestoTope: null,
+  presupuestoTopeUpdatedAt: null,
+  estancias: [...ESTANCIAS_DEFAULT],
+  lastBackupAt: null,
+};
 let compareMode = false;
 let filtersExpanded = false;
 /** @type {Set<string>} */
 const compareIds = new Set();
 /** @type {File|null} */
 let pendingImportFile = null;
+/** @type {object|null} */
+let pendingBackup = null;
+/** @type {string[]} */
+let draftEstancias = [];
+let settingsSnapshot = '';
 
 function clearFilters() {
   filters.estancia = 'Todos';
   filters.categoria = 'Todos';
   filters.estado = 'Todos';
   filters.listaCompra = false;
+  filters.query = '';
+  const search = /** @type {HTMLInputElement|null} */ (
+    document.getElementById('search-input')
+  );
+  if (search) search.value = '';
   document.getElementById('btn-lista-compra')?.classList.remove('active');
   paint();
 }
@@ -104,12 +123,13 @@ async function refresh() {
   productos = await getAllProductos();
   config = await getConfig();
   updateBudget(productos, config);
+  updateBackupBanner();
   paint();
 }
 
 function paint() {
   syncFilterChrome();
-
+  const estancias = config.estancias?.length ? config.estancias : ESTANCIAS_DEFAULT;
   const estanciasExtra = [
     ...new Set(productos.map((p) => p.estancia).filter(Boolean)),
   ];
@@ -120,6 +140,7 @@ function paint() {
       filters.estancia = value;
       paint();
     },
+    estancias,
     estanciasExtra
   );
   renderChips('categoria', filters.categoria, (value) => {
@@ -162,8 +183,40 @@ function paint() {
 const formApi = initForm({
   onSaved: refresh,
   getRecentStores: recentStores,
-  getRoomMeasure: (estancia) => config.medidasEstancia?.[estancia] || '',
+  getEstancias: () => config.estancias || ESTANCIAS_DEFAULT,
 });
+
+function renderEstanciasEditor() {
+  const box = document.getElementById('settings-estancias');
+  if (!box) return;
+  box.innerHTML = draftEstancias
+    .map(
+      (name, i) => `
+      <div class="estancia-edit-row">
+        <span>${name}</span>
+        <button type="button" class="btn-text" data-remove-estancia="${i}">Quitar</button>
+      </div>`
+    )
+    .join('');
+  box.querySelectorAll('[data-remove-estancia]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(/** @type {HTMLElement} */ (btn).dataset.removeEstancia);
+      if (draftEstancias.length <= 1) {
+        showToast('Deja al menos una estancia');
+        return;
+      }
+      draftEstancias.splice(idx, 1);
+      renderEstanciasEditor();
+    });
+  });
+}
+
+function settingsFormSnapshot() {
+  const tope = /** @type {HTMLInputElement} */ (
+    document.getElementById('settings-tope')
+  ).value.trim();
+  return JSON.stringify({ tope, estancias: draftEstancias });
+}
 
 function openSettings(focusTope = false) {
   const topeInput = /** @type {HTMLInputElement} */ (
@@ -171,21 +224,11 @@ function openSettings(focusTope = false) {
   );
   topeInput.value =
     config.presupuestoTope != null ? String(config.presupuestoTope) : '';
-
-  const box = document.getElementById('settings-medidas');
-  if (box) {
-    box.innerHTML = ESTANCIAS.map((estancia) => {
-      const val = config.medidasEstancia?.[estancia] || '';
-      return `
-        <div class="form-group">
-          <label for="medida-${estancia}">${estancia}</label>
-          <input id="medida-${estancia}" data-estancia="${estancia}" type="text"
-            value="${val.replace(/"/g, '&quot;')}" placeholder="ej. 3,20 × 4,10 m" />
-        </div>`;
-    }).join('');
-  }
-
+  draftEstancias = [...(config.estancias || ESTANCIAS_DEFAULT)];
+  renderEstanciasEditor();
   clearImportUi();
+  updateLastBackupLabel();
+  settingsSnapshot = settingsFormSnapshot();
 
   setOverlayOpen('settings-overlay', true, {
     focusSelector: focusTope ? '#settings-tope' : undefined,
@@ -197,21 +240,30 @@ async function saveSettingsFromForm() {
     document.getElementById('settings-tope')
   ).value.trim();
   const presupuestoTope = topeRaw === '' ? null : Number(topeRaw);
-  /** @type {Record<string, string>} */
-  const medidasEstancia = {};
-  document.querySelectorAll('#settings-medidas input[data-estancia]').forEach((el) => {
-    const input = /** @type {HTMLInputElement} */ (el);
-    const key = input.dataset.estancia;
-    if (key) medidasEstancia[key] = input.value.trim();
-  });
-  config = await saveConfig({ presupuestoTope, medidasEstancia });
+  const prev = config.presupuestoTope;
+  const patch = {
+    presupuestoTope,
+    estancias: draftEstancias.length ? draftEstancias : [...ESTANCIAS_DEFAULT],
+  };
+  if (presupuestoTope !== prev) {
+    patch.presupuestoTopeUpdatedAt = new Date().toISOString();
+  }
+  config = await saveConfig(patch);
   updateBudget(productos, config);
+  paint();
   showToast('Ajustes guardados');
 }
 
-/**
- * @param {string} fallbackBase
- */
+async function closeSettings(save) {
+  if (save) {
+    await saveSettingsFromForm();
+  } else if (settingsFormSnapshot() !== settingsSnapshot) {
+    if (!confirm('¿Descartar cambios de ajustes?')) return;
+  }
+  clearImportUi();
+  setOverlayOpen('settings-overlay', false);
+}
+
 function getExportFileName(fallbackBase) {
   const input = /** @type {HTMLInputElement|null} */ (
     document.getElementById('export-filename')
@@ -222,10 +274,6 @@ function getExportFileName(fallbackBase) {
   return name;
 }
 
-/**
- * @param {File} file
- * @returns {Promise<string>}
- */
 function readFileAsText(file) {
   if (typeof file.text === 'function') {
     return file.text().then((t) => String(t || ''));
@@ -240,14 +288,82 @@ function readFileAsText(file) {
 
 function clearImportUi() {
   pendingImportFile = null;
+  pendingBackup = null;
   const choice = document.getElementById('import-choice');
   if (choice) choice.hidden = true;
   const meta = document.getElementById('import-choice-meta');
   if (meta) meta.textContent = '';
+  const preview = document.getElementById('merge-preview');
+  if (preview) preview.innerHTML = '';
   const input = /** @type {HTMLInputElement|null} */ (
     document.getElementById('import-file')
   );
   if (input) input.value = '';
+}
+
+async function markBackupDone() {
+  config = await saveConfig({ lastBackupAt: new Date().toISOString() });
+  updateLastBackupLabel();
+  updateBackupBanner();
+}
+
+function updateLastBackupLabel() {
+  const el = document.getElementById('last-backup-label');
+  if (!el) return;
+  if (!config.lastBackupAt) {
+    el.textContent = 'Último backup: nunca';
+    return;
+  }
+  const d = new Date(config.lastBackupAt);
+  el.textContent = `Último backup: ${d.toLocaleString('es-ES')}`;
+}
+
+function updateBackupBanner() {
+  const banner = document.getElementById('backup-banner');
+  const text = document.getElementById('backup-banner-text');
+  if (!banner) return;
+  try {
+    if (sessionStorage.getItem('amueblar-backup-banner') === '1') {
+      banner.hidden = true;
+      return;
+    }
+  } catch {
+    /* ignore */
+  }
+  const active = productos.filter((p) => !p.deletedAt).length;
+  if (active < 3) {
+    banner.hidden = true;
+    return;
+  }
+  const last = config.lastBackupAt ? new Date(config.lastBackupAt).getTime() : 0;
+  const days = last ? (Date.now() - last) / (1000 * 60 * 60 * 24) : 999;
+  if (days >= 5) {
+    banner.hidden = false;
+    if (text) {
+      text.textContent = last
+        ? `Llevas ${Math.floor(days)} días sin exportar backup.`
+        : 'Aún no has exportado un backup. Recomendado si sois dos móviles.';
+    }
+  } else {
+    banner.hidden = true;
+  }
+}
+
+function updateInstallBanner() {
+  const banner = document.getElementById('install-banner');
+  if (!banner) return;
+  try {
+    if (localStorage.getItem('amueblar-install-dismiss') === '1') {
+      banner.hidden = true;
+      return;
+    }
+  } catch {
+    /* ignore */
+  }
+  const standalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    /** @type {any} */ (navigator).standalone;
+  banner.hidden = Boolean(standalone);
 }
 
 /**
@@ -261,36 +377,62 @@ async function applyBackup(backup, mode) {
     showToast(`Reemplazado · ${stats.added} productos`);
   } else {
     showToast(
-      `Sync: +${stats.added} nuevos · ${stats.updated} actualizados · ${stats.kept} igual`
+      `Sync: +${stats.added} · ~${stats.updated} · −${stats.deleted} · =${stats.kept}`
     );
   }
   return stats;
 }
 
+async function prepareBackupPreview(backup, metaText) {
+  pendingBackup = backup;
+  const all = await getAllProductos({ includeDeleted: true });
+  const plan = planMerge(backup, all);
+  const meta = document.getElementById('import-choice-meta');
+  if (meta) meta.textContent = metaText || '';
+  renderMergePreview(plan);
+  const choice = document.getElementById('import-choice');
+  if (choice) {
+    choice.hidden = false;
+    choice.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
 async function runImport(mode) {
-  if (!pendingImportFile) return;
-  showToast('Importando…');
+  const backup = pendingBackup;
+  if (!backup) return;
+  showToast(mode === 'replace' ? 'Reemplazando…' : 'Fusionando…');
   try {
-    const text = await readFileAsText(pendingImportFile);
-    if (!text.trim()) throw new Error('El archivo está vacío');
-    const backup = parseBackupPayload(text);
+    if (mode === 'replace') {
+      await autoBackupBeforeReplace();
+    }
     await applyBackup(backup, mode);
   } catch (err) {
     console.error(err);
-    showToast(err?.message || 'No se pudo importar el archivo');
+    showToast(/** @type {Error} */ (err)?.message || 'No se pudo importar');
   } finally {
     clearImportUi();
   }
 }
 
-/**
- * @param {boolean} includePhotos
- */
+async function autoBackupBeforeReplace() {
+  const full = await getAllProductos({ includeDeleted: true });
+  const backup = exportBackup(full, config, { includePhotos: true });
+  const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `amueblar-auto-antes-reemplazar-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  await markBackupDone();
+  showToast('Backup de seguridad descargado');
+}
+
 function downloadBackup(includePhotos) {
   const backup = exportBackup(productos, config, { includePhotos });
-  const name = getExportFileName(
-    includePhotos ? 'amueblar-backup' : 'amueblar-sync'
-  );
+  const name = getExportFileName(includePhotos ? 'amueblar-backup' : 'amueblar-sync');
   const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -300,11 +442,13 @@ function downloadBackup(includePhotos) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  markBackupDone();
   showToast(includePhotos ? `Exportado: ${name}` : `Sync exportado: ${name}`);
 }
 
 async function sendSync() {
-  const backup = exportBackup(productos, config, { includePhotos: false });
+  const all = await getAllProductos({ includeDeleted: true });
+  const backup = exportBackup(all, config, { includePhotos: false });
   const text = JSON.stringify(backup);
   const name = getExportFileName('amueblar-sync');
   const file = new File([text], name, { type: 'application/json' });
@@ -314,30 +458,33 @@ async function sendSync() {
       await navigator.share({
         files: [file],
         title: 'Amueblar sync',
-        text: 'Sync Amueblar (sin fotos). En el otro móvil: Ajustes → Importar archivo o Pegar sync.',
+        text: 'Sync Amueblar. En el otro móvil: Pegar sync o Importar → Fusionar.',
       });
+      await markBackupDone();
       showToast('Sync listo para enviar');
       return;
     }
   } catch (err) {
-    if (err?.name === 'AbortError') return;
+    if (/** @type {any} */ (err)?.name === 'AbortError') return;
   }
 
   try {
     if (navigator.share) {
       await navigator.share({
         title: 'Amueblar sync',
-        text: `Amueblar sync — en el otro móvil usa Pegar sync:\n\n${text}`,
+        text: `Amueblar sync — Pegar sync en el otro móvil:\n\n${text}`,
       });
+      await markBackupDone();
       showToast('Sync compartido');
       return;
     }
   } catch (err) {
-    if (err?.name === 'AbortError') return;
+    if (/** @type {any} */ (err)?.name === 'AbortError') return;
   }
 
   try {
     await navigator.clipboard.writeText(text);
+    await markBackupDone();
     showToast('Sync copiado. Pégalo en el otro móvil');
   } catch {
     downloadBackup(false);
@@ -351,24 +498,29 @@ async function pasteSync() {
       text = await navigator.clipboard.readText();
     } catch {
       text =
-        window.prompt(
-          'Pega aquí el texto del sync que te han enviado:'
-        ) || '';
+        window.prompt('Pega aquí el texto del sync que te han enviado:') || '';
     }
     if (!text.trim()) {
       showToast('No hay nada que pegar');
       return;
     }
-    showToast('Importando…');
     const backup = parseBackupPayload(text);
-    await applyBackup(backup, 'merge');
+    if (!document.getElementById('settings-overlay')?.classList.contains('open')) {
+      openSettings();
+    }
+    await prepareBackupPreview(backup, 'Sync pegado desde el portapapeles');
   } catch (err) {
     console.error(err);
-    showToast(err?.message || 'No se pudo leer el sync');
+    showToast(/** @type {Error} */ (err)?.message || 'No se pudo leer el sync');
   }
 }
 
 document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
+
+document.getElementById('search-input')?.addEventListener('input', (ev) => {
+  filters.query = /** @type {HTMLInputElement} */ (ev.target).value;
+  paint();
+});
 
 document.getElementById('btn-more-filters')?.addEventListener('click', () => {
   filtersExpanded = !filtersExpanded;
@@ -384,7 +536,7 @@ document.getElementById('btn-lista-compra')?.addEventListener('click', () => {
   filters.listaCompra = !filters.listaCompra;
   if (filters.listaCompra) {
     filters.estado = 'Todos';
-    showToast('Vista lista de la compra');
+    showToast('Lista por tienda');
   }
   paint();
 });
@@ -439,34 +591,30 @@ document.getElementById('resumen-overlay')?.addEventListener('click', (ev) => {
 
 document.getElementById('btn-settings')?.addEventListener('click', () => openSettings());
 document.getElementById('btn-set-tope')?.addEventListener('click', () => openSettings(true));
+document.getElementById('settings-close')?.addEventListener('click', () => closeSettings(false));
+document.getElementById('settings-cancel')?.addEventListener('click', () => closeSettings(false));
+document.getElementById('settings-done')?.addEventListener('click', () => closeSettings(true));
+document.getElementById('settings-overlay')?.addEventListener('click', (ev) => {
+  if (ev.target === ev.currentTarget) closeSettings(false);
+});
 
-document.getElementById('settings-close')?.addEventListener('click', async () => {
-  await saveSettingsFromForm();
-  setOverlayOpen('settings-overlay', false);
-});
-document.getElementById('settings-done')?.addEventListener('click', async () => {
-  await saveSettingsFromForm();
-  setOverlayOpen('settings-overlay', false);
-});
-document.getElementById('settings-overlay')?.addEventListener('click', async (ev) => {
-  if (ev.target === ev.currentTarget) {
-    await saveSettingsFromForm();
-    setOverlayOpen('settings-overlay', false);
+document.getElementById('btn-add-estancia')?.addEventListener('click', () => {
+  const input = /** @type {HTMLInputElement} */ (document.getElementById('new-estancia'));
+  const name = input.value.trim();
+  if (!name) return;
+  if (draftEstancias.includes(name)) {
+    showToast('Ya existe');
+    return;
   }
+  draftEstancias.push(name);
+  input.value = '';
+  renderEstanciasEditor();
 });
 
-document.getElementById('btn-sync-send')?.addEventListener('click', () => {
-  sendSync();
-});
-document.getElementById('btn-sync-paste')?.addEventListener('click', () => {
-  pasteSync();
-});
-document.getElementById('btn-export-sync')?.addEventListener('click', () => {
-  downloadBackup(false);
-});
-document.getElementById('btn-export')?.addEventListener('click', () => {
-  downloadBackup(true);
-});
+document.getElementById('btn-sync-send')?.addEventListener('click', () => sendSync());
+document.getElementById('btn-sync-paste')?.addEventListener('click', () => pasteSync());
+document.getElementById('btn-export-sync')?.addEventListener('click', () => downloadBackup(false));
+document.getElementById('btn-export')?.addEventListener('click', () => downloadBackup(true));
 
 document.getElementById('btn-import')?.addEventListener('click', () => {
   const input = /** @type {HTMLInputElement|null} */ (
@@ -481,15 +629,19 @@ document.getElementById('import-file')?.addEventListener('change', async (ev) =>
   const file = /** @type {HTMLInputElement} */ (ev.target).files?.[0];
   if (!file) return;
   pendingImportFile = file;
-  const meta = document.getElementById('import-choice-meta');
-  if (meta) {
+  try {
+    const text = await readFileAsText(file);
+    if (!text.trim()) throw new Error('El archivo está vacío');
+    const backup = parseBackupPayload(text);
     const kb = Math.max(1, Math.round(file.size / 1024));
-    meta.textContent = `Archivo: ${file.name || 'sin nombre'} · ${kb} KB`;
-  }
-  const choice = document.getElementById('import-choice');
-  if (choice) {
-    choice.hidden = false;
-    choice.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    await prepareBackupPreview(
+      backup,
+      `Archivo: ${file.name || 'sin nombre'} · ${kb} KB`
+    );
+  } catch (err) {
+    console.error(err);
+    showToast(/** @type {Error} */ (err)?.message || 'Archivo no válido');
+    clearImportUi();
   }
 });
 
@@ -499,7 +651,7 @@ document.getElementById('btn-import-merge')?.addEventListener('click', () => {
 document.getElementById('btn-import-replace')?.addEventListener('click', () => {
   if (
     !confirm(
-      'Se borrarán todos los productos actuales y se sustituirán por el backup. ¿Continuar?'
+      'Se descargará un backup de seguridad y luego se reemplazarán todos los productos. ¿Continuar?'
     )
   )
     return;
@@ -511,7 +663,6 @@ document.getElementById('btn-import-cancel')?.addEventListener('click', () => {
 
 document.getElementById('btn-share')?.addEventListener('click', async () => {
   const text = buildShareText(productos, config);
-  const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
   if (navigator.share) {
     try {
       await navigator.share({ title: 'Amueblar', text });
@@ -520,20 +671,38 @@ document.getElementById('btn-share')?.addEventListener('click', async () => {
       /* fall through */
     }
   }
-  window.open(waUrl, '_blank');
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+});
+
+document.getElementById('install-dismiss')?.addEventListener('click', () => {
+  const el = document.getElementById('install-banner');
+  if (el) el.hidden = true;
+  try {
+    localStorage.setItem('amueblar-install-dismiss', '1');
+  } catch {
+    /* ignore */
+  }
+});
+document.getElementById('backup-dismiss')?.addEventListener('click', () => {
+  const el = document.getElementById('backup-banner');
+  if (el) el.hidden = true;
+  try {
+    sessionStorage.setItem('amueblar-backup-banner', '1');
+  } catch {
+    /* ignore */
+  }
+});
+document.getElementById('backup-banner-go')?.addEventListener('click', () => {
+  openSettings();
 });
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key !== 'Escape') return;
-  for (const id of [
-    'settings-overlay',
-    'resumen-overlay',
-    'compare-overlay',
-  ]) {
+  for (const id of ['settings-overlay', 'resumen-overlay', 'compare-overlay']) {
     const el = document.getElementById(id);
     if (el?.classList.contains('open')) {
-      if (id === 'settings-overlay') saveSettingsFromForm();
-      setOverlayOpen(id, false);
+      if (id === 'settings-overlay') closeSettings(false);
+      else setOverlayOpen(id, false);
       break;
     }
   }
@@ -542,6 +711,7 @@ document.addEventListener('keydown', (ev) => {
 async function boot() {
   await openDb();
   await refresh();
+  updateInstallBanner();
 
   if ('serviceWorker' in navigator) {
     try {
