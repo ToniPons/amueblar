@@ -215,13 +215,15 @@ async function runImport(mode) {
   try {
     const text = await pendingImportFile.text();
     const backup = JSON.parse(text);
-    const n = await importBackup(backup, mode);
+    const stats = await importBackup(backup, mode);
     await refresh();
-    showToast(
-      mode === 'replace'
-        ? `Reemplazado · ${n} productos`
-        : `Fusionados ${n} productos`
-    );
+    if (mode === 'replace') {
+      showToast(`Reemplazado · ${stats.added} productos`);
+    } else {
+      showToast(
+        `Sync: +${stats.added} · ${stats.updated} actualizados · ${stats.kept} iguales`
+      );
+    }
   } catch (err) {
     console.error(err);
     showToast('No se pudo importar el backup');

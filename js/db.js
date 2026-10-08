@@ -82,6 +82,8 @@ export function createId() {
  */
 export function normalizeProducto(data) {
   const cantidad = Math.max(1, Math.round(Number(data.cantidad) || 1));
+  const now = new Date().toISOString();
+  const fechaCreacion = data.fechaCreacion || now;
   return {
     id: data.id || createId(),
     nombre: data.nombre || '',
@@ -95,8 +97,30 @@ export function normalizeProducto(data) {
     estado: data.estado || 'Candidato',
     fotoMueble: data.fotoMueble || null,
     fotoEtiqueta: data.fotoEtiqueta || null,
-    fechaCreacion: data.fechaCreacion || new Date().toISOString(),
+    fechaCreacion,
+    fechaActualizacion: data.fechaActualizacion || fechaCreacion,
   };
+}
+
+/**
+ * @param {object} p
+ */
+export function productTimestamp(p) {
+  const raw = p?.fechaActualizacion || p?.fechaCreacion || 0;
+  const t = new Date(raw).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+/**
+ * Elige la versión más reciente. Si empatan, gana la entrante.
+ * @param {object} local
+ * @param {object} incoming
+ * @returns {'local'|'incoming'}
+ */
+export function pickNewerProducto(local, incoming) {
+  const tLocal = productTimestamp(local);
+  const tIncoming = productTimestamp(incoming);
+  return tIncoming >= tLocal ? 'incoming' : 'local';
 }
 
 /**
@@ -124,10 +148,16 @@ export async function addProducto(data) {
 
 /**
  * @param {object} producto
+ * @param {{ touch?: boolean }} [opts] touch=false conserva fechaActualizacion (p. ej. import)
  */
-export async function updateProducto(producto) {
+export async function updateProducto(producto, opts = {}) {
   const db = await openDb();
-  const normalized = normalizeProducto(producto);
+  const touch = opts.touch !== false;
+  const normalized = normalizeProducto(
+    touch
+      ? { ...producto, fechaActualizacion: new Date().toISOString() }
+      : producto
+  );
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).put(normalized);
@@ -298,7 +328,7 @@ export async function saveConfig(patch) {
  */
 export function exportBackup(productos, config) {
   return {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     config,
     productos,
@@ -306,8 +336,64 @@ export function exportBackup(productos, config) {
 }
 
 /**
+ * @param {object} producto
+ */
+async function putProductoRaw(producto) {
+  const db = await openDb();
+  const normalized = normalizeProducto(producto);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(normalized);
+    tx.oncomplete = () => resolve(normalized);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/**
+ * @param {object|null|undefined} incomingConfig
+ * @param {'merge'|'replace'} mode
+ */
+async function applyConfigFromBackup(incomingConfig, mode) {
+  if (!incomingConfig) return;
+
+  if (mode === 'replace') {
+    await saveConfig({
+      presupuestoTope:
+        incomingConfig.presupuestoTope != null &&
+        incomingConfig.presupuestoTope !== ''
+          ? Number(incomingConfig.presupuestoTope)
+          : null,
+      medidasEstancia: incomingConfig.medidasEstancia || {},
+    });
+    return;
+  }
+
+  const current = await getConfig();
+  /** @type {Record<string, string>} */
+  const medidas = { ...(current.medidasEstancia || {}) };
+  for (const [key, value] of Object.entries(incomingConfig.medidasEstancia || {})) {
+    const next = String(value || '').trim();
+    if (!next) continue;
+    const prev = String(medidas[key] || '').trim();
+    if (!prev || prev !== next) medidas[key] = next;
+  }
+
+  let presupuestoTope = current.presupuestoTope;
+  if (
+    incomingConfig.presupuestoTope != null &&
+    incomingConfig.presupuestoTope !== '' &&
+    !Number.isNaN(Number(incomingConfig.presupuestoTope))
+  ) {
+    presupuestoTope = Number(incomingConfig.presupuestoTope);
+  }
+
+  await saveConfig({ presupuestoTope, medidasEstancia: medidas });
+}
+
+/**
  * @param {object} backup
  * @param {'merge'|'replace'} mode
+ * @returns {Promise<{ added: number, updated: number, kept: number, total: number }>}
  */
 export async function importBackup(backup, mode = 'merge') {
   if (!backup || !Array.isArray(backup.productos)) {
@@ -315,6 +401,7 @@ export async function importBackup(backup, mode = 'merge') {
   }
 
   const db = await openDb();
+  const stats = { added: 0, updated: 0, kept: 0, total: 0 };
 
   if (mode === 'replace') {
     await new Promise((resolve, reject) => {
@@ -323,33 +410,47 @@ export async function importBackup(backup, mode = 'merge') {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
+
+    for (const raw of backup.productos) {
+      await putProductoRaw({
+        ...raw,
+        id: raw.id || createId(),
+      });
+      stats.added += 1;
+    }
+
+    await applyConfigFromBackup(backup.config, 'replace');
+    stats.total = stats.added;
+    return stats;
   }
+
+  const existing = await getAllProductos();
+  const byId = new Map(existing.map((p) => [p.id, p]));
 
   for (const raw of backup.productos) {
-    const producto = normalizeProducto({
+    const incoming = normalizeProducto({
       ...raw,
-      id: mode === 'replace' ? raw.id || createId() : createId(),
-      fechaCreacion: raw.fechaCreacion || new Date().toISOString(),
+      id: raw.id || createId(),
     });
-    // En merge siempre id nuevo para no pisar; en replace conservar id si existe
-    if (mode === 'replace' && raw.id) producto.id = raw.id;
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).put(producto);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+    const local = byId.get(incoming.id);
+
+    if (!local) {
+      await putProductoRaw(incoming);
+      byId.set(incoming.id, incoming);
+      stats.added += 1;
+      continue;
+    }
+
+    if (pickNewerProducto(local, incoming) === 'incoming') {
+      await putProductoRaw(incoming);
+      byId.set(incoming.id, incoming);
+      stats.updated += 1;
+    } else {
+      stats.kept += 1;
+    }
   }
 
-  if (backup.config) {
-    await saveConfig({
-      presupuestoTope:
-        backup.config.presupuestoTope != null
-          ? Number(backup.config.presupuestoTope)
-          : null,
-      medidasEstancia: backup.config.medidasEstancia || {},
-    });
-  }
-
-  return backup.productos.length;
+  await applyConfigFromBackup(backup.config, 'merge');
+  stats.total = stats.added + stats.updated + stats.kept;
+  return stats;
 }

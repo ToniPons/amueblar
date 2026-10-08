@@ -355,9 +355,12 @@
         <input id="import-file" type="file" accept="application/json,.json" hidden />
 
         <div class="import-choice" id="import-choice" hidden>
-          <p class="step-hint">¿Cómo quieres importar el archivo?</p>
+          <p class="step-hint">
+            <strong>Fusionar (sync)</strong> une por ID: se queda la versión más reciente.
+            Ideal para sincronizar entre móviles. <strong>Reemplazar</strong> borra lo local.
+          </p>
           <div class="btn-row">
-            <button type="button" class="btn btn-secondary" id="btn-import-merge">Fusionar</button>
+            <button type="button" class="btn btn-primary" id="btn-import-merge">Fusionar (sync)</button>
             <button type="button" class="btn btn-danger" id="btn-import-replace">Reemplazar todo</button>
           </div>
           <button type="button" class="btn btn-secondary" id="btn-import-cancel">Cancelar</button>
