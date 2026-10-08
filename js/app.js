@@ -123,7 +123,6 @@ async function refresh() {
   productos = await getAllProductos();
   config = await getConfig();
   updateBudget(productos, config);
-  updateBackupBanner();
   paint();
 }
 
@@ -199,14 +198,22 @@ function renderEstanciasEditor() {
     )
     .join('');
   box.querySelectorAll('[data-remove-estancia]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const idx = Number(/** @type {HTMLElement} */ (btn).dataset.removeEstancia);
       if (draftEstancias.length <= 1) {
         showToast('Deja al menos una estancia');
         return;
       }
+      const removed = draftEstancias[idx];
       draftEstancias.splice(idx, 1);
       renderEstanciasEditor();
+      try {
+        await persistEstancias();
+        showToast(`Estancia «${removed}» eliminada`);
+      } catch (err) {
+        console.error(err);
+        showToast('No se pudo eliminar la estancia');
+      }
     });
   });
 }
@@ -235,33 +242,89 @@ function openSettings(focusTope = false) {
   });
 }
 
+function consumeNewEstanciaInput() {
+  const input = /** @type {HTMLInputElement|null} */ (
+    document.getElementById('new-estancia')
+  );
+  const name = (input?.value || '').trim();
+  if (!name) return null;
+  if (draftEstancias.includes(name)) {
+    if (input) input.value = '';
+    showToast('Esa estancia ya existe');
+    return null;
+  }
+  draftEstancias.push(name);
+  if (input) input.value = '';
+  renderEstanciasEditor();
+  return name;
+}
+
+async function persistEstancias() {
+  const list = draftEstancias.length ? [...draftEstancias] : [...ESTANCIAS_DEFAULT];
+  config = await saveConfig({ estancias: list });
+  draftEstancias = [...(config.estancias || list)];
+  settingsSnapshot = settingsFormSnapshot();
+  paint();
+}
+
+async function addEstanciaFromInput() {
+  const name = consumeNewEstanciaInput();
+  if (!name) {
+    const input = document.getElementById('new-estancia');
+    if (!(/** @type {HTMLInputElement|null} */ (input)?.value || '').trim()) {
+      showToast('Escribe un nombre y pulsa Añadir');
+    }
+    return;
+  }
+  try {
+    await persistEstancias();
+    showToast(`Estancia «${name}» guardada`);
+  } catch (err) {
+    console.error(err);
+    showToast(/** @type {Error} */ (err)?.message || 'No se pudo guardar la estancia');
+  }
+}
+
 async function saveSettingsFromForm() {
+  // Si hay texto pendiente en el campo, lo incorpora antes de guardar
+  consumeNewEstanciaInput();
+
   const topeRaw = /** @type {HTMLInputElement} */ (
     document.getElementById('settings-tope')
   ).value.trim();
   const presupuestoTope = topeRaw === '' ? null : Number(topeRaw);
+  if (topeRaw !== '' && Number.isNaN(presupuestoTope)) {
+    throw new Error('El tope no es un número válido');
+  }
   const prev = config.presupuestoTope;
   const patch = {
     presupuestoTope,
-    estancias: draftEstancias.length ? draftEstancias : [...ESTANCIAS_DEFAULT],
+    estancias: draftEstancias.length ? [...draftEstancias] : [...ESTANCIAS_DEFAULT],
   };
   if (presupuestoTope !== prev) {
     patch.presupuestoTopeUpdatedAt = new Date().toISOString();
   }
   config = await saveConfig(patch);
+  draftEstancias = [...(config.estancias || patch.estancias)];
+  settingsSnapshot = settingsFormSnapshot();
   updateBudget(productos, config);
   paint();
   showToast('Ajustes guardados');
 }
 
 async function closeSettings(save) {
-  if (save) {
-    await saveSettingsFromForm();
-  } else if (settingsFormSnapshot() !== settingsSnapshot) {
-    if (!confirm('¿Descartar cambios de ajustes?')) return;
+  try {
+    if (save) {
+      await saveSettingsFromForm();
+    } else if (settingsFormSnapshot() !== settingsSnapshot) {
+      if (!confirm('¿Descartar cambios de ajustes?')) return;
+    }
+    clearImportUi();
+    setOverlayOpen('settings-overlay', false);
+  } catch (err) {
+    console.error(err);
+    showToast(/** @type {Error} */ (err)?.message || 'No se pudieron guardar los ajustes');
   }
-  clearImportUi();
-  setOverlayOpen('settings-overlay', false);
 }
 
 function getExportFileName(fallbackBase) {
@@ -304,7 +367,6 @@ function clearImportUi() {
 async function markBackupDone() {
   config = await saveConfig({ lastBackupAt: new Date().toISOString() });
   updateLastBackupLabel();
-  updateBackupBanner();
 }
 
 function updateLastBackupLabel() {
@@ -316,54 +378,6 @@ function updateLastBackupLabel() {
   }
   const d = new Date(config.lastBackupAt);
   el.textContent = `Último backup: ${d.toLocaleString('es-ES')}`;
-}
-
-function updateBackupBanner() {
-  const banner = document.getElementById('backup-banner');
-  const text = document.getElementById('backup-banner-text');
-  if (!banner) return;
-  try {
-    if (sessionStorage.getItem('amueblar-backup-banner') === '1') {
-      banner.hidden = true;
-      return;
-    }
-  } catch {
-    /* ignore */
-  }
-  const active = productos.filter((p) => !p.deletedAt).length;
-  if (active < 3) {
-    banner.hidden = true;
-    return;
-  }
-  const last = config.lastBackupAt ? new Date(config.lastBackupAt).getTime() : 0;
-  const days = last ? (Date.now() - last) / (1000 * 60 * 60 * 24) : 999;
-  if (days >= 5) {
-    banner.hidden = false;
-    if (text) {
-      text.textContent = last
-        ? `Llevas ${Math.floor(days)} días sin exportar backup.`
-        : 'Aún no has exportado un backup. Recomendado si sois dos móviles.';
-    }
-  } else {
-    banner.hidden = true;
-  }
-}
-
-function updateInstallBanner() {
-  const banner = document.getElementById('install-banner');
-  if (!banner) return;
-  try {
-    if (localStorage.getItem('amueblar-install-dismiss') === '1') {
-      banner.hidden = true;
-      return;
-    }
-  } catch {
-    /* ignore */
-  }
-  const standalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    /** @type {any} */ (navigator).standalone;
-  banner.hidden = Boolean(standalone);
 }
 
 /**
@@ -599,16 +613,13 @@ document.getElementById('settings-overlay')?.addEventListener('click', (ev) => {
 });
 
 document.getElementById('btn-add-estancia')?.addEventListener('click', () => {
-  const input = /** @type {HTMLInputElement} */ (document.getElementById('new-estancia'));
-  const name = input.value.trim();
-  if (!name) return;
-  if (draftEstancias.includes(name)) {
-    showToast('Ya existe');
-    return;
+  addEstanciaFromInput();
+});
+document.getElementById('new-estancia')?.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    addEstanciaFromInput();
   }
-  draftEstancias.push(name);
-  input.value = '';
-  renderEstanciasEditor();
 });
 
 document.getElementById('btn-sync-send')?.addEventListener('click', () => sendSync());
@@ -674,28 +685,6 @@ document.getElementById('btn-share')?.addEventListener('click', async () => {
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 });
 
-document.getElementById('install-dismiss')?.addEventListener('click', () => {
-  const el = document.getElementById('install-banner');
-  if (el) el.hidden = true;
-  try {
-    localStorage.setItem('amueblar-install-dismiss', '1');
-  } catch {
-    /* ignore */
-  }
-});
-document.getElementById('backup-dismiss')?.addEventListener('click', () => {
-  const el = document.getElementById('backup-banner');
-  if (el) el.hidden = true;
-  try {
-    sessionStorage.setItem('amueblar-backup-banner', '1');
-  } catch {
-    /* ignore */
-  }
-});
-document.getElementById('backup-banner-go')?.addEventListener('click', () => {
-  openSettings();
-});
-
 document.addEventListener('keydown', (ev) => {
   if (ev.key !== 'Escape') return;
   for (const id of ['settings-overlay', 'resumen-overlay', 'compare-overlay']) {
@@ -711,7 +700,6 @@ document.addEventListener('keydown', (ev) => {
 async function boot() {
   await openDb();
   await refresh();
-  updateInstallBanner();
 
   if ('serviceWorker' in navigator) {
     try {

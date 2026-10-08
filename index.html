@@ -30,16 +30,6 @@
   </head>
   <body>
     <div class="app-shell">
-      <div id="install-banner" class="sys-banner" hidden>
-        <p>Instala Amueblar en el móvil: menú del navegador → <strong>Añadir a pantalla de inicio</strong>.</p>
-        <button type="button" class="banner-dismiss" id="install-dismiss" aria-label="Cerrar">×</button>
-      </div>
-      <div id="backup-banner" class="sys-banner warn" hidden>
-        <p id="backup-banner-text">Hace tiempo que no exportas un backup.</p>
-        <button type="button" class="btn btn-sm btn-secondary" id="backup-banner-go">Ajustes</button>
-        <button type="button" class="banner-dismiss" id="backup-dismiss" aria-label="Cerrar">×</button>
-      </div>
-
       <div class="sticky-top">
         <header class="header-panel" aria-label="Presupuesto">
           <div class="brand-row">
@@ -361,11 +351,11 @@
         </div>
 
         <h3 class="settings-subtitle">Estancias</h3>
-        <p class="step-hint">Añade o quita habitaciones de la lista.</p>
+        <p class="step-hint">Escribe el nombre y pulsa Añadir (se guarda al momento).</p>
         <div id="settings-estancias" class="settings-estancias"></div>
-        <div class="btn-row">
+        <div class="btn-row estancia-add-row">
           <input id="new-estancia" type="text" placeholder="Nueva estancia" autocomplete="off" />
-          <button type="button" class="btn btn-secondary" id="btn-add-estancia">Añadir</button>
+          <button type="button" class="btn btn-primary" id="btn-add-estancia">Añadir</button>
         </div>
 
         <h3 class="settings-subtitle">Sincronizar con pareja</h3>

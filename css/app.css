@@ -1349,6 +1349,15 @@ body::before {
   padding: 0.35rem;
 }
 
+.estancia-add-row {
+  align-items: stretch;
+}
+
+.estancia-add-row .btn {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+}
+
 #new-estancia {
   flex: 1;
   font-family: var(--font-body);
