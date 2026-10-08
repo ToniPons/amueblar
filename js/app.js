@@ -18,7 +18,6 @@ import {
   showToast,
   setOverlayOpen,
   renderResumenEstancias,
-  renderCompare,
   renderMergePreview,
   buildShareText,
 } from './ui.js';
@@ -44,10 +43,7 @@ let config = {
   estancias: [...ESTANCIAS_DEFAULT],
   lastBackupAt: null,
 };
-let compareMode = false;
 let filtersExpanded = false;
-/** @type {Set<string>} */
-const compareIds = new Set();
 /** @type {File|null} */
 let pendingImportFile = null;
 /** @type {object|null} */
@@ -81,20 +77,6 @@ function recentStores() {
     .sort((a, b) => b[1] - a[1])
     .map(([name]) => name)
     .slice(0, 6);
-}
-
-function updateCompareBar() {
-  const bar = document.getElementById('compare-bar');
-  const countEl = document.getElementById('compare-count');
-  const openBtn = /** @type {HTMLButtonElement|null} */ (
-    document.getElementById('btn-compare-open')
-  );
-  if (!bar) return;
-  bar.hidden = !compareMode;
-  const n = compareIds.size;
-  if (countEl) countEl.textContent = `${n} seleccionado${n === 1 ? '' : 's'}`;
-  if (openBtn) openBtn.disabled = n < 2;
-  document.getElementById('btn-compare')?.classList.toggle('active', compareMode);
 }
 
 function syncFilterChrome() {
@@ -160,23 +142,7 @@ function paint() {
       await refresh();
     },
     onClearFilters: clearFilters,
-    compareMode,
-    compareIds,
-    onToggleCompare: (id) => {
-      if (compareIds.has(id)) compareIds.delete(id);
-      else {
-        if (compareIds.size >= 3) {
-          showToast('Máximo 3 productos para comparar');
-          paint();
-          return;
-        }
-        compareIds.add(id);
-      }
-      updateCompareBar();
-      paint();
-    },
   });
-  updateCompareBar();
 }
 
 const formApi = initForm({
@@ -555,35 +521,6 @@ document.getElementById('btn-lista-compra')?.addEventListener('click', () => {
   paint();
 });
 
-document.getElementById('btn-compare')?.addEventListener('click', () => {
-  compareMode = !compareMode;
-  if (!compareMode) compareIds.clear();
-  updateCompareBar();
-  paint();
-  showToast(compareMode ? 'Marca 2–3 productos' : 'Comparar desactivado');
-});
-
-document.getElementById('btn-compare-clear')?.addEventListener('click', () => {
-  compareIds.clear();
-  updateCompareBar();
-  paint();
-});
-
-document.getElementById('btn-compare-open')?.addEventListener('click', () => {
-  renderCompare(productos, [...compareIds]);
-  setOverlayOpen('compare-overlay', true);
-});
-
-document.getElementById('compare-close')?.addEventListener('click', () => {
-  setOverlayOpen('compare-overlay', false);
-});
-document.getElementById('compare-done')?.addEventListener('click', () => {
-  setOverlayOpen('compare-overlay', false);
-});
-document.getElementById('compare-overlay')?.addEventListener('click', (ev) => {
-  if (ev.target === ev.currentTarget) setOverlayOpen('compare-overlay', false);
-});
-
 document.getElementById('btn-resumen')?.addEventListener('click', () => {
   renderResumenEstancias(productos, (estancia) => {
     filters.estancia = estancia;
@@ -687,7 +624,7 @@ document.getElementById('btn-share')?.addEventListener('click', async () => {
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key !== 'Escape') return;
-  for (const id of ['settings-overlay', 'resumen-overlay', 'compare-overlay']) {
+  for (const id of ['settings-overlay', 'resumen-overlay']) {
     const el = document.getElementById(id);
     if (el?.classList.contains('open')) {
       if (id === 'settings-overlay') closeSettings(false);

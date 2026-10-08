@@ -286,13 +286,6 @@ export function renderGrid(productos, filters, sort, handlers) {
       ? `<img src="${escapeAttr(src)}" alt="" loading="lazy">`
       : `<div class="placeholder">Sin foto</div>`;
 
-    const compareChecked = handlers.compareIds?.has(p.id);
-    const compareHtml = handlers.compareMode
-      ? `<label class="card-compare" title="Comparar">
-          <input type="checkbox" ${compareChecked ? 'checked' : ''} aria-label="Añadir a comparación">
-        </label>`
-      : '';
-
     const pills = ESTADOS.map((e) => {
       const active = e === p.estado ? ' active' : '';
       return `<button type="button" class="estado-pill${active}" data-estado="${e}" aria-pressed="${e === p.estado}">${ESTADO_SHORT[e] || e}</button>`;
@@ -302,7 +295,6 @@ export function renderGrid(productos, filters, sort, handlers) {
       <div class="card-photo">
         ${photoHtml}
         <span class="badge ${p.estado}">${p.estado}</span>
-        ${compareHtml}
       </div>
       <div class="card-body">
         <div class="card-name">${escapeHtml(p.nombre || 'Sin nombre')}</div>
@@ -321,7 +313,7 @@ export function renderGrid(productos, filters, sort, handlers) {
     card.addEventListener('click', (ev) => {
       if (
         /** @type {HTMLElement} */ (ev.target).closest(
-          '.estado-pills, .card-compare, input, button'
+          '.estado-pills, input, button'
         )
       )
         return;
@@ -347,13 +339,6 @@ export function renderGrid(productos, filters, sort, handlers) {
         if (!estado || estado === p.estado) return;
         handlers.onEstado(p.id, estado);
       });
-    });
-
-    const cmp = card.querySelector('.card-compare input');
-    cmp?.addEventListener('click', (ev) => ev.stopPropagation());
-    cmp?.addEventListener('change', (ev) => {
-      ev.stopPropagation();
-      handlers.onToggleCompare?.(p.id);
     });
 
     grid.appendChild(card);
@@ -452,48 +437,6 @@ export function renderResumenEstancias(productos, onSelect) {
       if (estancia) onSelect?.(estancia);
     });
   });
-}
-
-/**
- * @param {object[]} productos
- * @param {string[]} ids
- */
-export function renderCompare(productos, ids) {
-  const el = document.getElementById('compare-grid');
-  if (!el) return;
-  const items = ids
-    .map((id) => productos.find((p) => p.id === id && !p.deletedAt))
-    .filter(Boolean)
-    .slice(0, 3);
-
-  if (items.length < 2) {
-    el.innerHTML = `<p class="muted">Elige 2 o 3 productos en la rejilla (modo comparar).</p>`;
-    return;
-  }
-
-  el.innerHTML = items
-    .map((p) => {
-      const qty = Math.max(1, Number(p.cantidad) || 1);
-      const src = safePhotoSrc(p.fotoMueble);
-      const photo = src
-        ? `<img src="${escapeAttr(src)}" alt="">`
-        : `<div class="placeholder">Sin foto</div>`;
-      return `
-        <article class="compare-card">
-          <div class="compare-photo">${photo}</div>
-          <h3>${escapeHtml(p.nombre || 'Sin nombre')}</h3>
-          <p class="compare-price">${formatEuro(lineTotal(p))}${qty > 1 ? ` <small>(${qty}×)</small>` : ''}</p>
-          <ul>
-            <li><strong>Tienda</strong> ${escapeHtml(p.tienda || '—')}</li>
-            <li><strong>Medidas</strong> ${escapeHtml(p.medidas || '—')}</li>
-            <li><strong>Estancia</strong> ${escapeHtml(p.estancia || '—')}</li>
-            <li><strong>Estado</strong> ${escapeHtml(p.estado || '—')}</li>
-            <li><strong>Enlace</strong> ${p.enlace ? `<a href="${escapeAttr(p.enlace)}" target="_blank" rel="noopener">Abrir</a>` : '—'}</li>
-            <li><strong>Notas</strong> ${escapeHtml(p.notas || '—')}</li>
-          </ul>
-        </article>`;
-    })
-    .join('');
 }
 
 /**

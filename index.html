@@ -126,7 +126,6 @@
               </select>
             </label>
             <button type="button" class="tool-btn" id="btn-lista-compra">Lista</button>
-            <button type="button" class="tool-btn" id="btn-compare">Comparar</button>
             <button type="button" class="tool-btn" id="btn-resumen">Resumen</button>
           </div>
 
@@ -139,16 +138,6 @@
 
           <div class="mode-banner" id="lista-banner" hidden>
             Lista de la compra · agrupada por tienda · toca ✓ para marcar comprado
-          </div>
-
-          <div class="compare-bar" id="compare-bar" hidden>
-            <span id="compare-count">0 seleccionados</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-compare-open" disabled>
-              Ver comparación
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-compare-clear">
-              Limpiar
-            </button>
           </div>
         </section>
       </div>
@@ -309,21 +298,6 @@
         <div id="resumen-list"></div>
         <div class="btn-row">
           <button type="button" class="btn btn-primary" id="resumen-done">Cerrar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Comparar -->
-    <div class="overlay" id="compare-overlay" aria-hidden="true" role="presentation">
-      <div class="sheet sheet-wide" role="dialog" aria-modal="true" aria-labelledby="compare-title" tabindex="-1">
-        <div class="sheet-top">
-          <div class="sheet-handle" aria-hidden="true"></div>
-          <button type="button" class="sheet-close" id="compare-close" aria-label="Cerrar">×</button>
-        </div>
-        <h2 id="compare-title">Comparar</h2>
-        <div id="compare-grid" class="compare-grid"></div>
-        <div class="btn-row">
-          <button type="button" class="btn btn-primary" id="compare-done">Cerrar</button>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-const CACHE = 'amueblar-v21';
+const CACHE = 'amueblar-v22';
 const ASSETS = [
   './',
   './index.html',
