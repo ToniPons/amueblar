@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1c2421" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Amueblar" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta
+      name="description"
+      content="Gestiona muebles, electrodomésticos y presupuesto de mudanza offline."
+    />
+    <title>Amueblar — Muebles y presupuesto</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Syne:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ['Syne', 'system-ui', 'sans-serif'],
+              body: ['Figtree', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              ink: '#1c2421',
+              accent: '#1b6b4a',
+              oak: '#a67c52',
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="./css/app.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <div class="sticky-top">
+        <header class="header-panel" aria-label="Presupuesto">
+          <div class="brand-row">
+            <h1 class="brand">Amueblar</h1>
+            <button type="button" class="icon-btn" id="btn-settings" aria-label="Ajustes">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                />
+                <path
+                  d="M19.4 13.2a1.4 1.4 0 0 0 .28 1.54l.06.06a1.7 1.7 0 1 1-2.4 2.4l-.06-.06a1.4 1.4 0 0 0-1.54-.28 1.4 1.4 0 0 0-.85 1.28V18a1.7 1.7 0 1 1-3.4 0v-.08a1.4 1.4 0 0 0-.9-1.28 1.4 1.4 0 0 0-1.54.28l-.06.06a1.7 1.7 0 1 1-2.4-2.4l.06-.06a1.4 1.4 0 0 0 .28-1.54 1.4 1.4 0 0 0-1.28-.85H6a1.7 1.7 0 1 1 0-3.4h.08a1.4 1.4 0 0 0 1.28-.9 1.4 1.4 0 0 0-.28-1.54l-.06-.06a1.7 1.7 0 1 1 2.4-2.4l.06.06a1.4 1.4 0 0 0 1.54.28h.05A1.4 1.4 0 0 0 12 4.08V4a1.7 1.7 0 1 1 3.4 0v.08a1.4 1.4 0 0 0 .85 1.28 1.4 1.4 0 0 0 1.54-.28l.06-.06a1.7 1.7 0 1 1 2.4 2.4l-.06.06a1.4 1.4 0 0 0-.28 1.54v.05c.2.5.66.85 1.2.85H20a1.7 1.7 0 1 1 0 3.4h-.08a1.4 1.4 0 0 0-1.28.9Z"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div class="budget-row" id="budget-row">
+            <div class="budget-card">
+              <div class="label">Seleccionado</div>
+              <div class="value" id="budget-total">0,00 €</div>
+            </div>
+            <div class="budget-card real">
+              <div class="label">Comprado</div>
+              <div class="value" id="budget-real">0,00 €</div>
+            </div>
+            <div class="budget-card budget-cap-card" id="budget-cap-card" hidden>
+              <div class="label">Tope</div>
+              <div class="value" id="budget-cap">—</div>
+            </div>
+            <div class="budget-card budget-remain-card" id="budget-remain-card" hidden>
+              <div class="label">Queda</div>
+              <div class="value" id="budget-remain">—</div>
+            </div>
+          </div>
+
+          <button type="button" class="budget-set-tope" id="btn-set-tope" hidden>
+            Definir tope de presupuesto
+          </button>
+
+          <div class="budget-progress" id="budget-progress" hidden>
+            <div class="budget-progress-track" aria-hidden="true">
+              <div class="budget-progress-fill" id="budget-progress-fill"></div>
+            </div>
+            <span class="budget-progress-label" id="budget-progress-label"></span>
+          </div>
+        </header>
+
+        <section class="filters" aria-label="Filtros">
+          <div class="filter-row">
+            <span class="filter-label">Estancia</span>
+            <div id="filter-estancia" class="chip-scroll" role="listbox" aria-label="Estancia"></div>
+          </div>
+
+          <div class="filters-extra" id="filters-extra" hidden>
+            <div class="filter-row">
+              <span class="filter-label">Categoría</span>
+              <div id="filter-categoria" class="chip-scroll" role="listbox" aria-label="Categoría"></div>
+            </div>
+            <div class="filter-row" id="filter-estado-row">
+              <span class="filter-label">Estado</span>
+              <div id="filter-estado" class="chip-scroll" role="listbox" aria-label="Estado"></div>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button type="button" class="tool-btn tool-toggle" id="btn-more-filters">
+              Más filtros
+            </button>
+            <label class="toolbar-sort">
+              <span class="sr-only">Orden</span>
+              <select id="sort-select" aria-label="Ordenar">
+                <option value="fecha">Recientes</option>
+                <option value="precio-asc">Precio ↑</option>
+                <option value="precio-desc">Precio ↓</option>
+                <option value="nombre">Nombre</option>
+              </select>
+            </label>
+            <button type="button" class="tool-btn" id="btn-lista-compra">Lista</button>
+            <button type="button" class="tool-btn" id="btn-compare">Comparar</button>
+            <button type="button" class="tool-btn" id="btn-resumen">Resumen</button>
+          </div>
+
+          <div class="filter-meta">
+            <span id="result-count" class="result-count" aria-live="polite"></span>
+            <button type="button" class="clear-filters" id="clear-filters" hidden>
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div class="mode-banner" id="lista-banner" hidden>
+            Vista lista de la compra (seleccionado + comprado)
+          </div>
+
+          <div class="compare-bar" id="compare-bar" hidden>
+            <span id="compare-count">0 seleccionados</span>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-compare-open" disabled>
+              Ver comparación
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-compare-clear">
+              Limpiar
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <main>
+        <div id="product-grid" class="grid" aria-live="polite"></div>
+      </main>
+    </div>
+
+    <button type="button" class="fab" id="fab-add" aria-label="Añadir mueble">
+      <span aria-hidden="true">+</span>
+    </button>
+
+    <!-- Formulario -->
+    <div class="overlay" id="form-overlay" aria-hidden="true" role="presentation">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="form-title" tabindex="-1">
+        <div class="sheet-top">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <button type="button" class="sheet-close" id="form-close" aria-label="Cerrar">×</button>
+        </div>
+        <h2 id="form-title">Añadir mueble</h2>
+        <p class="step-hint" id="form-hint">
+          Foto del mueble y datos básicos. Activa modo rápido si vas con prisa en tienda.
+        </p>
+
+        <label class="quick-toggle">
+          <input type="checkbox" id="field-quick-mode" />
+          <span>Modo rápido (foto + precio)</span>
+        </label>
+
+        <form id="product-form">
+          <input type="hidden" id="field-id" />
+
+          <div class="photo-pickers">
+            <label class="photo-slot" id="slot-mueble">
+              <img id="preview-mueble" alt="" hidden />
+              <span class="photo-slot-label">
+                <strong>Mueble</strong>
+                <small>Toca para foto</small>
+              </span>
+              <span class="photo-slot-change">Cambiar</span>
+              <input id="input-mueble" type="file" accept="image/*" capture="environment" />
+            </label>
+            <label class="photo-slot" id="slot-etiqueta">
+              <img id="preview-etiqueta" alt="" hidden />
+              <span class="photo-slot-label">
+                <strong>Etiqueta</strong>
+                <small>Opcional</small>
+              </span>
+              <span class="photo-slot-change">Cambiar</span>
+              <input id="input-etiqueta" type="file" accept="image/*" capture="environment" />
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label for="field-nombre">Nombre</label>
+            <input id="field-nombre" type="text" required placeholder="Mesa KALLAX" autocomplete="off" />
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="field-precio">Precio unit. (€)</label>
+              <input
+                id="field-precio"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="129"
+                inputmode="decimal"
+              />
+            </div>
+            <div class="form-group">
+              <label for="field-cantidad">Cantidad</label>
+              <input id="field-cantidad" type="number" min="1" step="1" value="1" inputmode="numeric" />
+            </div>
+          </div>
+
+          <p class="form-line-total" id="form-line-total" aria-live="polite">Total línea: 0,00 €</p>
+
+          <div class="form-group">
+            <label for="field-tienda">Tienda</label>
+            <input id="field-tienda" type="text" placeholder="IKEA" autocomplete="off" />
+            <div id="tienda-chips" class="chip-scroll tienda-chips" aria-label="Tiendas rápidas"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="field-estancia">Estancia</label>
+            <select id="field-estancia"></select>
+            <p class="room-hint" id="room-measure-hint" hidden></p>
+          </div>
+
+          <div class="form-group full-only">
+            <label for="field-medidas">Medidas producto</label>
+            <input id="field-medidas" type="text" placeholder="140x84x75 cm" autocomplete="off" />
+          </div>
+
+          <div class="form-group full-only">
+            <label for="field-categoria">Categoría</label>
+            <select id="field-categoria"></select>
+          </div>
+
+          <div class="form-group full-only">
+            <label for="field-estado">Estado</label>
+            <select id="field-estado"></select>
+          </div>
+
+          <div class="form-group full-only">
+            <label for="field-notas">Notas / enlace / referencia</label>
+            <textarea id="field-notas" rows="3" placeholder="Pasillo B, URL, falta tornillería…"></textarea>
+          </div>
+
+          <div class="btn-row sticky-actions">
+            <button type="button" class="btn btn-secondary" id="form-cancel">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+          <div class="btn-row" id="form-duplicate-row" hidden>
+            <button type="button" class="btn btn-secondary" id="form-duplicate">Duplicar</button>
+          </div>
+          <div class="btn-row" id="form-delete-row" hidden>
+            <button type="button" class="btn btn-danger" id="form-delete">Eliminar producto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Detalle -->
+    <div class="overlay" id="detail-overlay" aria-hidden="true" role="presentation">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="detail-title" tabindex="-1">
+        <div class="sheet-top">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <button type="button" class="sheet-close" id="detail-close-x" aria-label="Cerrar">×</button>
+        </div>
+        <div id="detail-content"></div>
+      </div>
+    </div>
+
+    <!-- Resumen por estancia -->
+    <div class="overlay" id="resumen-overlay" aria-hidden="true" role="presentation">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="resumen-title" tabindex="-1">
+        <div class="sheet-top">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <button type="button" class="sheet-close" id="resumen-close" aria-label="Cerrar">×</button>
+        </div>
+        <h2 id="resumen-title">Resumen por estancia</h2>
+        <p class="step-hint">Toca una estancia para filtrarla en la lista.</p>
+        <div id="resumen-list"></div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="resumen-done">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparar -->
+    <div class="overlay" id="compare-overlay" aria-hidden="true" role="presentation">
+      <div class="sheet sheet-wide" role="dialog" aria-modal="true" aria-labelledby="compare-title" tabindex="-1">
+        <div class="sheet-top">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <button type="button" class="sheet-close" id="compare-close" aria-label="Cerrar">×</button>
+        </div>
+        <h2 id="compare-title">Comparar</h2>
+        <div id="compare-grid" class="compare-grid"></div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="compare-done">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ajustes -->
+    <div class="overlay" id="settings-overlay" aria-hidden="true" role="presentation">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
+        <div class="sheet-top">
+          <div class="sheet-handle" aria-hidden="true"></div>
+          <button type="button" class="sheet-close" id="settings-close" aria-label="Cerrar">×</button>
+        </div>
+        <h2 id="settings-title">Ajustes</h2>
+
+        <div class="form-group">
+          <label for="settings-tope">Tope de presupuesto (€)</label>
+          <input
+            id="settings-tope"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="Sin tope"
+            inputmode="decimal"
+          />
+          <p class="field-help">Déjalo vacío si no quieres límite.</p>
+        </div>
+
+        <h3 class="settings-subtitle">Medidas de cada estancia</h3>
+        <p class="step-hint">Ej. “3,20 × 4,10 m” — se muestran al elegir esa estancia.</p>
+        <div id="settings-medidas" class="settings-medidas"></div>
+
+        <h3 class="settings-subtitle">Datos</h3>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" id="btn-export">Exportar backup</button>
+          <button type="button" class="btn btn-secondary" id="btn-import">Importar…</button>
+        </div>
+        <input id="import-file" type="file" accept="application/json,.json" hidden />
+
+        <div class="import-choice" id="import-choice" hidden>
+          <p class="step-hint">¿Cómo quieres importar el archivo?</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-secondary" id="btn-import-merge">Fusionar</button>
+            <button type="button" class="btn btn-danger" id="btn-import-replace">Reemplazar todo</button>
+          </div>
+          <button type="button" class="btn btn-secondary" id="btn-import-cancel">Cancelar</button>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="btn-share">Compartir resumen</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" id="settings-done">Guardar y cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>

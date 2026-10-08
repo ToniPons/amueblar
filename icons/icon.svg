@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Amueblar">
+  <rect width="512" height="512" rx="96" fill="#1c2421"/>
+  <rect x="96" y="280" width="320" height="36" rx="8" fill="#a67c52"/>
+  <rect x="120" y="180" width="56" height="100" rx="8" fill="#c8e6d5"/>
+  <rect x="336" y="180" width="56" height="100" rx="8" fill="#c8e6d5"/>
+  <rect x="176" y="148" width="160" height="28" rx="8" fill="#1b6b4a"/>
+  <circle cx="256" cy="360" r="18" fill="#e8d5c4"/>
+</svg>
