@@ -1105,6 +1105,17 @@ body::before {
   margin-top: 0.45rem;
 }
 
+.file-input-host {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
 .detail-notes p {
   margin: 0;
   font-size: 0.9rem;

@@ -41,8 +41,6 @@ let filtersExpanded = false;
 const compareIds = new Set();
 /** @type {File|null} */
 let pendingImportFile = null;
-/** @type {'merge-first'|null} */
-let pendingImportMode = null;
 
 function clearFilters() {
   filters.estancia = 'Todos';
@@ -187,9 +185,7 @@ function openSettings(focusTope = false) {
     }).join('');
   }
 
-  const choice = document.getElementById('import-choice');
-  if (choice) choice.hidden = true;
-  pendingImportFile = null;
+  clearImportUi();
 
   setOverlayOpen('settings-overlay', true, {
     focusSelector: focusTope ? '#settings-tope' : undefined,
@@ -214,6 +210,47 @@ async function saveSettingsFromForm() {
 }
 
 /**
+ * @param {string} fallbackBase
+ */
+function getExportFileName(fallbackBase) {
+  const input = /** @type {HTMLInputElement|null} */ (
+    document.getElementById('export-filename')
+  );
+  let name = (input?.value || '').trim() || fallbackBase;
+  name = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-');
+  if (!name.toLowerCase().endsWith('.json')) name += '.json';
+  return name;
+}
+
+/**
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
+function readFileAsText(file) {
+  if (typeof file.text === 'function') {
+    return file.text().then((t) => String(t || ''));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('No se pudo leer el archivo'));
+    reader.readAsText(file);
+  });
+}
+
+function clearImportUi() {
+  pendingImportFile = null;
+  const choice = document.getElementById('import-choice');
+  if (choice) choice.hidden = true;
+  const meta = document.getElementById('import-choice-meta');
+  if (meta) meta.textContent = '';
+  const input = /** @type {HTMLInputElement|null} */ (
+    document.getElementById('import-file')
+  );
+  if (input) input.value = '';
+}
+
+/**
  * @param {object} backup
  * @param {'merge'|'replace'} mode
  */
@@ -232,42 +269,52 @@ async function applyBackup(backup, mode) {
 
 async function runImport(mode) {
   if (!pendingImportFile) return;
+  showToast('Importando…');
   try {
-    const text = await pendingImportFile.text();
+    const text = await readFileAsText(pendingImportFile);
+    if (!text.trim()) throw new Error('El archivo está vacío');
     const backup = parseBackupPayload(text);
     await applyBackup(backup, mode);
   } catch (err) {
     console.error(err);
-    showToast(err?.message || 'No se pudo importar el backup');
+    showToast(err?.message || 'No se pudo importar el archivo');
   } finally {
-    pendingImportFile = null;
-    pendingImportMode = null;
-    const choice = document.getElementById('import-choice');
-    if (choice) choice.hidden = true;
-    const input = /** @type {HTMLInputElement|null} */ (
-      document.getElementById('import-file')
-    );
-    if (input) input.value = '';
+    clearImportUi();
   }
 }
 
-function buildSyncBackup() {
-  return exportBackup(productos, config, { includePhotos: false });
+/**
+ * @param {boolean} includePhotos
+ */
+function downloadBackup(includePhotos) {
+  const backup = exportBackup(productos, config, { includePhotos });
+  const name = getExportFileName(
+    includePhotos ? 'amueblar-backup' : 'amueblar-sync'
+  );
+  const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast(includePhotos ? `Exportado: ${name}` : `Sync exportado: ${name}`);
 }
 
 async function sendSync() {
-  const backup = buildSyncBackup();
+  const backup = exportBackup(productos, config, { includePhotos: false });
   const text = JSON.stringify(backup);
-  const file = new File([text], `amueblar-sync-${new Date().toISOString().slice(0, 10)}.json`, {
-    type: 'application/json',
-  });
+  const name = getExportFileName('amueblar-sync');
+  const file = new File([text], name, { type: 'application/json' });
 
   try {
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
       await navigator.share({
         files: [file],
         title: 'Amueblar sync',
-        text: 'Sync Amueblar (sin fotos). En Ajustes → Pegar sync o Recibir archivo.',
+        text: 'Sync Amueblar (sin fotos). En el otro móvil: Ajustes → Importar archivo o Pegar sync.',
       });
       showToast('Sync listo para enviar');
       return;
@@ -280,7 +327,7 @@ async function sendSync() {
     if (navigator.share) {
       await navigator.share({
         title: 'Amueblar sync',
-        text: `Amueblar sync — pega esto en Ajustes → Pegar sync:\n\n${text}`,
+        text: `Amueblar sync — en el otro móvil usa Pegar sync:\n\n${text}`,
       });
       showToast('Sync compartido');
       return;
@@ -293,14 +340,7 @@ async function sendSync() {
     await navigator.clipboard.writeText(text);
     showToast('Sync copiado. Pégalo en el otro móvil');
   } catch {
-    const blob = new Blob([text], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Archivo sync descargado');
+    downloadBackup(false);
   }
 }
 
@@ -319,6 +359,7 @@ async function pasteSync() {
       showToast('No hay nada que pegar');
       return;
     }
+    showToast('Importando…');
     const backup = parseBackupPayload(text);
     await applyBackup(backup, 'merge');
   } catch (err) {
@@ -420,38 +461,31 @@ document.getElementById('btn-sync-send')?.addEventListener('click', () => {
 document.getElementById('btn-sync-paste')?.addEventListener('click', () => {
   pasteSync();
 });
-document.getElementById('btn-sync-file')?.addEventListener('click', () => {
-  pendingImportMode = 'merge-first';
-  document.getElementById('import-file')?.click();
+document.getElementById('btn-export-sync')?.addEventListener('click', () => {
+  downloadBackup(false);
 });
-
 document.getElementById('btn-export')?.addEventListener('click', () => {
-  const backup = exportBackup(productos, config, { includePhotos: true });
-  const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `amueblar-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('Backup con fotos exportado');
+  downloadBackup(true);
 });
 
 document.getElementById('btn-import')?.addEventListener('click', () => {
-  pendingImportMode = null;
-  document.getElementById('import-file')?.click();
+  const input = /** @type {HTMLInputElement|null} */ (
+    document.getElementById('import-file')
+  );
+  if (!input) return;
+  input.value = '';
+  input.click();
 });
 
 document.getElementById('import-file')?.addEventListener('change', async (ev) => {
   const file = /** @type {HTMLInputElement} */ (ev.target).files?.[0];
   if (!file) return;
   pendingImportFile = file;
-
-  if (pendingImportMode === 'merge-first') {
-    await runImport('merge');
-    return;
+  const meta = document.getElementById('import-choice-meta');
+  if (meta) {
+    const kb = Math.max(1, Math.round(file.size / 1024));
+    meta.textContent = `Archivo: ${file.name || 'sin nombre'} · ${kb} KB`;
   }
-
   const choice = document.getElementById('import-choice');
   if (choice) {
     choice.hidden = false;
@@ -472,14 +506,7 @@ document.getElementById('btn-import-replace')?.addEventListener('click', () => {
   runImport('replace');
 });
 document.getElementById('btn-import-cancel')?.addEventListener('click', () => {
-  pendingImportFile = null;
-  pendingImportMode = null;
-  const choice = document.getElementById('import-choice');
-  if (choice) choice.hidden = true;
-  const input = /** @type {HTMLInputElement|null} */ (
-    document.getElementById('import-file')
-  );
-  if (input) input.value = '';
+  clearImportUi();
 });
 
 document.getElementById('btn-share')?.addEventListener('click', async () => {
