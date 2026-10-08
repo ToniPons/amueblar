@@ -399,62 +399,7 @@ document.addEventListener('keydown', (ev) => {
   }
 });
 
-const APP_PIN = '2580';
-const PIN_SESSION_KEY = 'amueblar-pin-ok';
-
-function isUnlocked() {
-  try {
-    return sessionStorage.getItem(PIN_SESSION_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function unlockApp() {
-  try {
-    sessionStorage.setItem(PIN_SESSION_KEY, '1');
-  } catch {
-    /* ignore */
-  }
-  document.body.classList.remove('locked');
-}
-
-/**
- * @returns {Promise<void>}
- */
-function waitForPin() {
-  if (isUnlocked()) {
-    unlockApp();
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve) => {
-    const form = /** @type {HTMLFormElement|null} */ (document.getElementById('pin-form'));
-    const input = /** @type {HTMLInputElement|null} */ (document.getElementById('pin-input'));
-    const error = document.getElementById('pin-error');
-
-    requestAnimationFrame(() => input?.focus());
-
-    form?.addEventListener('submit', (ev) => {
-      ev.preventDefault();
-      const value = (input?.value || '').trim();
-      if (value === APP_PIN) {
-        if (error) error.hidden = true;
-        unlockApp();
-        resolve();
-        return;
-      }
-      if (error) error.hidden = false;
-      if (input) {
-        input.value = '';
-        input.focus();
-      }
-    });
-  });
-}
-
 async function boot() {
-  await waitForPin();
   await openDb();
   await refresh();
 

@@ -46,29 +46,7 @@
     </script>
     <link rel="stylesheet" href="./css/app.css" />
   </head>
-  <body class="locked">
-    <div class="pin-gate" id="pin-gate" role="dialog" aria-modal="true" aria-labelledby="pin-title">
-      <div class="pin-card">
-        <h1 class="brand pin-brand" id="pin-title">Amueblar</h1>
-        <p class="pin-hint">Introduce el PIN para entrar</p>
-        <form id="pin-form" autocomplete="off">
-          <label class="sr-only" for="pin-input">PIN</label>
-          <input
-            id="pin-input"
-            type="password"
-            inputmode="numeric"
-            pattern="[0-9]*"
-            maxlength="8"
-            autocomplete="one-time-code"
-            placeholder="••••"
-            required
-          />
-          <p class="pin-error" id="pin-error" hidden>PIN incorrecto</p>
-          <button type="submit" class="btn btn-primary">Entrar</button>
-        </form>
-      </div>
-    </div>
-
+  <body>
     <div class="app-shell">
       <div class="sticky-top">
         <header class="header-panel" aria-label="Presupuesto">
