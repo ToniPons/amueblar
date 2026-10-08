@@ -325,14 +325,62 @@ export async function saveConfig(patch) {
 /**
  * @param {object[]} productos
  * @param {object} config
+ * @param {{ includePhotos?: boolean }} [opts]
  */
-export function exportBackup(productos, config) {
+export function exportBackup(productos, config, opts = {}) {
+  const includePhotos = opts.includePhotos !== false;
+  const list = includePhotos
+    ? productos
+    : productos.map((p) => ({
+        ...p,
+        fotoMueble: null,
+        fotoEtiqueta: null,
+      }));
   return {
     version: 3,
     exportedAt: new Date().toISOString(),
+    includePhotos,
     config,
-    productos,
+    productos: list,
   };
+}
+
+/**
+ * @param {string} text
+ */
+export function parseBackupPayload(text) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) throw new Error('Backup vacío');
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1));
+    }
+    throw new Error('No se reconoce el backup');
+  }
+}
+
+/**
+ * Conserva fotos locales si el sync llega sin ellas.
+ * @param {object} local
+ * @param {object} incoming
+ */
+export function mergeProductoFields(local, incoming) {
+  const winner =
+    pickNewerProducto(local, incoming) === 'incoming' ? incoming : local;
+  const other = winner === incoming ? local : incoming;
+  return normalizeProducto({
+    ...winner,
+    fotoMueble: winner.fotoMueble || other.fotoMueble || null,
+    fotoEtiqueta: winner.fotoEtiqueta || other.fotoEtiqueta || null,
+    // Si gana el ligero sin fotos pero los datos son del winner, OK;
+    // fechaActualizacion del winner se conserva vía normalize
+    fechaActualizacion: winner.fechaActualizacion || winner.fechaCreacion,
+    fechaCreacion: winner.fechaCreacion || other.fechaCreacion,
+  });
 }
 
 /**
@@ -428,6 +476,7 @@ export async function importBackup(backup, mode = 'merge') {
   const byId = new Map(existing.map((p) => [p.id, p]));
 
   for (const raw of backup.productos) {
+    if (!raw || typeof raw !== 'object') continue;
     const incoming = normalizeProducto({
       ...raw,
       id: raw.id || createId(),
@@ -441,9 +490,22 @@ export async function importBackup(backup, mode = 'merge') {
       continue;
     }
 
-    if (pickNewerProducto(local, incoming) === 'incoming') {
-      await putProductoRaw(incoming);
-      byId.set(incoming.id, incoming);
+    const merged = mergeProductoFields(local, incoming);
+    const changed =
+      productTimestamp(merged) !== productTimestamp(local) ||
+      merged.fotoMueble !== local.fotoMueble ||
+      merged.fotoEtiqueta !== local.fotoEtiqueta ||
+      merged.nombre !== local.nombre ||
+      merged.precio !== local.precio ||
+      merged.estado !== local.estado ||
+      merged.cantidad !== local.cantidad ||
+      merged.notas !== local.notas ||
+      merged.tienda !== local.tienda ||
+      merged.estancia !== local.estancia;
+
+    if (changed) {
+      await putProductoRaw(merged);
+      byId.set(incoming.id, merged);
       stats.updated += 1;
     } else {
       stats.kept += 1;

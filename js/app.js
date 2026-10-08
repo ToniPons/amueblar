@@ -7,6 +7,7 @@ import {
   saveConfig,
   exportBackup,
   importBackup,
+  parseBackupPayload,
   ESTANCIAS,
 } from './db.js';
 import {
@@ -40,6 +41,8 @@ let filtersExpanded = false;
 const compareIds = new Set();
 /** @type {File|null} */
 let pendingImportFile = null;
+/** @type {'merge-first'|null} */
+let pendingImportMode = null;
 
 function clearFilters() {
   filters.estancia = 'Todos';
@@ -210,31 +213,117 @@ async function saveSettingsFromForm() {
   showToast('Ajustes guardados');
 }
 
+/**
+ * @param {object} backup
+ * @param {'merge'|'replace'} mode
+ */
+async function applyBackup(backup, mode) {
+  const stats = await importBackup(backup, mode);
+  await refresh();
+  if (mode === 'replace') {
+    showToast(`Reemplazado · ${stats.added} productos`);
+  } else {
+    showToast(
+      `Sync: +${stats.added} nuevos · ${stats.updated} actualizados · ${stats.kept} igual`
+    );
+  }
+  return stats;
+}
+
 async function runImport(mode) {
   if (!pendingImportFile) return;
   try {
     const text = await pendingImportFile.text();
-    const backup = JSON.parse(text);
-    const stats = await importBackup(backup, mode);
-    await refresh();
-    if (mode === 'replace') {
-      showToast(`Reemplazado · ${stats.added} productos`);
-    } else {
-      showToast(
-        `Sync: +${stats.added} · ${stats.updated} actualizados · ${stats.kept} iguales`
-      );
-    }
+    const backup = parseBackupPayload(text);
+    await applyBackup(backup, mode);
   } catch (err) {
     console.error(err);
-    showToast('No se pudo importar el backup');
+    showToast(err?.message || 'No se pudo importar el backup');
   } finally {
     pendingImportFile = null;
+    pendingImportMode = null;
     const choice = document.getElementById('import-choice');
     if (choice) choice.hidden = true;
     const input = /** @type {HTMLInputElement|null} */ (
       document.getElementById('import-file')
     );
     if (input) input.value = '';
+  }
+}
+
+function buildSyncBackup() {
+  return exportBackup(productos, config, { includePhotos: false });
+}
+
+async function sendSync() {
+  const backup = buildSyncBackup();
+  const text = JSON.stringify(backup);
+  const file = new File([text], `amueblar-sync-${new Date().toISOString().slice(0, 10)}.json`, {
+    type: 'application/json',
+  });
+
+  try {
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Amueblar sync',
+        text: 'Sync Amueblar (sin fotos). En Ajustes → Pegar sync o Recibir archivo.',
+      });
+      showToast('Sync listo para enviar');
+      return;
+    }
+  } catch (err) {
+    if (err?.name === 'AbortError') return;
+  }
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Amueblar sync',
+        text: `Amueblar sync — pega esto en Ajustes → Pegar sync:\n\n${text}`,
+      });
+      showToast('Sync compartido');
+      return;
+    }
+  } catch (err) {
+    if (err?.name === 'AbortError') return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Sync copiado. Pégalo en el otro móvil');
+  } catch {
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Archivo sync descargado');
+  }
+}
+
+async function pasteSync() {
+  try {
+    let text = '';
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      text =
+        window.prompt(
+          'Pega aquí el texto del sync que te han enviado:'
+        ) || '';
+    }
+    if (!text.trim()) {
+      showToast('No hay nada que pegar');
+      return;
+    }
+    const backup = parseBackupPayload(text);
+    await applyBackup(backup, 'merge');
+  } catch (err) {
+    console.error(err);
+    showToast(err?.message || 'No se pudo leer el sync');
   }
 }
 
@@ -325,8 +414,19 @@ document.getElementById('settings-overlay')?.addEventListener('click', async (ev
   }
 });
 
+document.getElementById('btn-sync-send')?.addEventListener('click', () => {
+  sendSync();
+});
+document.getElementById('btn-sync-paste')?.addEventListener('click', () => {
+  pasteSync();
+});
+document.getElementById('btn-sync-file')?.addEventListener('click', () => {
+  pendingImportMode = 'merge-first';
+  document.getElementById('import-file')?.click();
+});
+
 document.getElementById('btn-export')?.addEventListener('click', () => {
-  const backup = exportBackup(productos, config);
+  const backup = exportBackup(productos, config, { includePhotos: true });
   const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -334,10 +434,11 @@ document.getElementById('btn-export')?.addEventListener('click', () => {
   a.download = `amueblar-backup-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('Backup exportado');
+  showToast('Backup con fotos exportado');
 });
 
 document.getElementById('btn-import')?.addEventListener('click', () => {
+  pendingImportMode = null;
   document.getElementById('import-file')?.click();
 });
 
@@ -345,8 +446,17 @@ document.getElementById('import-file')?.addEventListener('change', async (ev) =>
   const file = /** @type {HTMLInputElement} */ (ev.target).files?.[0];
   if (!file) return;
   pendingImportFile = file;
+
+  if (pendingImportMode === 'merge-first') {
+    await runImport('merge');
+    return;
+  }
+
   const choice = document.getElementById('import-choice');
-  if (choice) choice.hidden = false;
+  if (choice) {
+    choice.hidden = false;
+    choice.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
 });
 
 document.getElementById('btn-import-merge')?.addEventListener('click', () => {
@@ -363,6 +473,7 @@ document.getElementById('btn-import-replace')?.addEventListener('click', () => {
 });
 document.getElementById('btn-import-cancel')?.addEventListener('click', () => {
   pendingImportFile = null;
+  pendingImportMode = null;
   const choice = document.getElementById('import-choice');
   if (choice) choice.hidden = true;
   const input = /** @type {HTMLInputElement|null} */ (

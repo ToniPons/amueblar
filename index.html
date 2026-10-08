@@ -347,27 +347,40 @@
         <p class="step-hint">Ej. “3,20 × 4,10 m” — se muestran al elegir esa estancia.</p>
         <div id="settings-medidas" class="settings-medidas"></div>
 
-        <h3 class="settings-subtitle">Datos</h3>
+        <h3 class="settings-subtitle">Sincronizar con pareja</h3>
+        <p class="step-hint">
+          Envía o recibe un sync <strong>ligero</strong> (sin fotos, archivo pequeño).
+          Se unen por ID y gana la versión más reciente. Las fotos de cada móvil se conservan.
+        </p>
         <div class="btn-row">
-          <button type="button" class="btn btn-secondary" id="btn-export">Exportar backup</button>
+          <button type="button" class="btn btn-primary" id="btn-sync-send">Enviar sync</button>
+          <button type="button" class="btn btn-secondary" id="btn-sync-paste">Pegar sync</button>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" id="btn-sync-file">Recibir archivo…</button>
+        </div>
+        <input id="import-file" type="file" accept="*/*,.json,application/json,text/plain" hidden />
+
+        <h3 class="settings-subtitle">Backup completo</h3>
+        <p class="step-hint">Incluye fotos. Solo si necesitas copia total (archivo grande).</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" id="btn-export">Exportar con fotos</button>
           <button type="button" class="btn btn-secondary" id="btn-import">Importar…</button>
         </div>
-        <input id="import-file" type="file" accept="application/json,.json" hidden />
 
         <div class="import-choice" id="import-choice" hidden>
           <p class="step-hint">
-            <strong>Fusionar (sync)</strong> une por ID: se queda la versión más reciente.
-            Ideal para sincronizar entre móviles. <strong>Reemplazar</strong> borra lo local.
+            <strong>Fusionar</strong> une sin borrar. <strong>Reemplazar</strong> borra lo local.
           </p>
           <div class="btn-row">
-            <button type="button" class="btn btn-primary" id="btn-import-merge">Fusionar (sync)</button>
+            <button type="button" class="btn btn-primary" id="btn-import-merge">Fusionar</button>
             <button type="button" class="btn btn-danger" id="btn-import-replace">Reemplazar todo</button>
           </div>
           <button type="button" class="btn btn-secondary" id="btn-import-cancel">Cancelar</button>
         </div>
 
         <div class="btn-row">
-          <button type="button" class="btn btn-primary" id="btn-share">Compartir resumen</button>
+          <button type="button" class="btn btn-secondary" id="btn-share">Compartir resumen texto</button>
         </div>
         <div class="btn-row">
           <button type="button" class="btn btn-secondary" id="settings-done">Guardar y cerrar</button>
