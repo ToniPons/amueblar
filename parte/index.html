@@ -340,16 +340,44 @@
     }
     .empty .btn { margin-top: 16px; }
 
+    .room-group {
+      animation: slide-up 0.3s ease both;
+    }
+    .room-group + .room-group {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .room-group-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .room-group-head h3 {
+      margin: 0;
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .room-group-head .room-count {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
     .incident {
       display: grid;
       grid-template-columns: 76px 1fr;
       gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--line);
-      animation: slide-up 0.3s ease both;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(20, 38, 40, 0.06);
     }
-    .incident:last-child { border-bottom: none; padding-bottom: 0; }
-    .incident:first-child { padding-top: 2px; }
+    .room-group .incident:last-child { border-bottom: none; padding-bottom: 0; }
     .incident-thumb {
       width: 76px;
       height: 76px;
@@ -357,20 +385,21 @@
       object-fit: cover;
       background: #d7e0de;
     }
-    .incident-body h3 {
+    .incident-body .incident-title {
       margin: 0 0 4px;
       font-size: 0.95rem;
       font-weight: 600;
-    }
-    .incident-body p {
-      margin: 0 0 6px;
-      color: var(--ink-soft);
-      font-size: 0.86rem;
-      line-height: 1.35;
+      color: var(--ink);
+      line-height: 1.3;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+    }
+    .incident-body .incident-title .num {
+      color: var(--accent-2);
+      font-weight: 600;
+      margin-right: 4px;
     }
     .meta { font-size: 0.72rem; color: var(--muted); }
     .incident-actions { display: flex; gap: 12px; margin-top: 8px; }
@@ -1021,23 +1050,51 @@
     els.exportBtn.disabled = incidents.length === 0;
   }
 
-  function renderFilters(sorted) {
-    const roomsUsed = [...new Set(sorted.map((i) => i.room))];
-    if (roomsUsed.length < 2) {
+  /** Group incidents by room (meta.rooms order), oldest-first within each room. */
+  function groupByRoom(items) {
+    const map = new Map();
+    for (const item of items) {
+      if (!map.has(item.room)) map.set(item.room, []);
+      map.get(item.room).push(item);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.createdAt - b.createdAt);
+    }
+    const order = [];
+    for (const room of meta.rooms) {
+      if (map.has(room)) order.push(room);
+    }
+    const extras = [...map.keys()]
+      .filter((r) => !order.includes(r))
+      .sort((a, b) => a.localeCompare(b, "es"));
+    return [...order, ...extras].map((room) => ({ room, items: map.get(room) }));
+  }
+
+  function incidentLabel(item, indexInRoom) {
+    const comment = (item.comment || "").trim();
+    if (comment) return comment;
+    return `Desperfecto ${indexInRoom}`;
+  }
+
+  function renderFilters(allItems) {
+    const groups = groupByRoom(allItems);
+    if (groups.length < 2) {
       els.filterScroll.hidden = true;
       els.filterScroll.innerHTML = "";
       filterRoom = "Todas";
       return;
     }
     els.filterScroll.hidden = false;
-    const options = ["Todas", ...roomsUsed.sort((a, b) => a.localeCompare(b, "es"))];
+    const options = ["Todas", ...groups.map((g) => g.room)];
     if (!options.includes(filterRoom)) filterRoom = "Todas";
     els.filterScroll.innerHTML = "";
     for (const name of options) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "filter-chip" + (name === filterRoom ? " active" : "");
-      const n = name === "Todas" ? sorted.length : sorted.filter((i) => i.room === name).length;
+      const n = name === "Todas"
+        ? allItems.length
+        : (groups.find((g) => g.room === name)?.items.length || 0);
       btn.textContent = `${name} (${n})`;
       btn.addEventListener("click", () => {
         filterRoom = name;
@@ -1049,17 +1106,18 @@
 
   function renderList() {
     revokeListUrls();
-    const sorted = incidents.slice().sort((a, b) => b.createdAt - a.createdAt);
-    els.count.textContent = String(sorted.length);
+    const all = incidents.slice();
+    els.count.textContent = String(all.length);
     updateExportState();
-    renderFilters(sorted);
+    renderFilters(all);
 
-    const visible = filterRoom === "Todas"
-      ? sorted
-      : sorted.filter((i) => i.room === filterRoom);
+    let groups = groupByRoom(all);
+    if (filterRoom !== "Todas") {
+      groups = groups.filter((g) => g.room === filterRoom);
+    }
 
-    const emptyAll = sorted.length === 0;
-    const emptyFilter = !emptyAll && visible.length === 0;
+    const emptyAll = all.length === 0;
+    const emptyFilter = !emptyAll && groups.length === 0;
     els.empty.hidden = !emptyAll && !emptyFilter;
     if (emptyAll) {
       $("empty-title").textContent = "Todavía no hay nada";
@@ -1080,34 +1138,57 @@
       : "Añade desperfectos mientras recorres el piso.";
     updateDaysChip();
 
-    for (const item of visible) {
-      const row = document.createElement("article");
-      row.className = "incident";
-      const img = document.createElement("img");
-      img.className = "incident-thumb";
-      img.alt = item.room;
-      img.loading = "lazy";
-      const url = URL.createObjectURL(item.photo);
-      listObjectUrls.push(url);
-      img.src = url;
-      const body = document.createElement("div");
-      body.className = "incident-body";
-      body.innerHTML = `
-        <h3></h3>
-        <p></p>
-        <div class="meta"></div>
-        <div class="incident-actions">
-          <button type="button" class="linkish" data-edit>Editar</button>
-          <button type="button" class="linkish danger" data-del>Eliminar</button>
-        </div>`;
-      body.querySelector("h3").textContent = item.room;
-      body.querySelector("p").textContent = item.comment || "Sin comentario";
-      body.querySelector(".meta").textContent = formatDate(item.createdAt);
-      body.querySelector("[data-edit]").addEventListener("click", () => openSheet(item.id));
-      body.querySelector("[data-del]").addEventListener("click", () => confirmDelete(item.id));
-      row.appendChild(img);
-      row.appendChild(body);
-      els.listEl.appendChild(row);
+    for (const group of groups) {
+      const section = document.createElement("section");
+      section.className = "room-group";
+      section.setAttribute("aria-label", group.room);
+
+      const head = document.createElement("div");
+      head.className = "room-group-head";
+      const h3 = document.createElement("h3");
+      h3.textContent = group.room;
+      const count = document.createElement("span");
+      count.className = "room-count";
+      const n = group.items.length;
+      count.textContent = n === 1 ? "1 incidencia" : `${n} incidencias`;
+      head.appendChild(h3);
+      head.appendChild(count);
+      section.appendChild(head);
+
+      group.items.forEach((item, idx) => {
+        const row = document.createElement("article");
+        row.className = "incident";
+        const img = document.createElement("img");
+        img.className = "incident-thumb";
+        img.alt = incidentLabel(item, idx + 1);
+        img.loading = "lazy";
+        const url = URL.createObjectURL(item.photo);
+        listObjectUrls.push(url);
+        img.src = url;
+        const body = document.createElement("div");
+        body.className = "incident-body";
+        body.innerHTML = `
+          <h4 class="incident-title"></h4>
+          <div class="meta"></div>
+          <div class="incident-actions">
+            <button type="button" class="linkish" data-edit>Editar</button>
+            <button type="button" class="linkish danger" data-del>Eliminar</button>
+          </div>`;
+        const title = body.querySelector(".incident-title");
+        const num = document.createElement("span");
+        num.className = "num";
+        num.textContent = `${idx + 1}.`;
+        title.appendChild(num);
+        title.appendChild(document.createTextNode(incidentLabel(item, idx + 1)));
+        body.querySelector(".meta").textContent = formatDate(item.createdAt);
+        body.querySelector("[data-edit]").addEventListener("click", () => openSheet(item.id));
+        body.querySelector("[data-del]").addEventListener("click", () => confirmDelete(item.id));
+        row.appendChild(img);
+        row.appendChild(body);
+        section.appendChild(row);
+      });
+
+      els.listEl.appendChild(section);
     }
   }
 
@@ -1484,7 +1565,8 @@
       const contentW = pageW - margin * 2;
       const today = new Date();
       const dateStr = today.toISOString().slice(0, 10);
-      const sorted = incidents.slice().sort((a, b) => a.createdAt - b.createdAt);
+      const groups = groupByRoom(incidents);
+      const totalCount = incidents.length;
 
       doc.setFillColor(26, 60, 58);
       doc.rect(0, 0, pageW, 48, "F");
@@ -1525,7 +1607,11 @@
       const d = daysRemaining();
       y += 4;
       doc.setFont("helvetica", "bold");
-      doc.text(`Incidencias registradas: ${sorted.length}`, margin, y);
+      doc.text(
+        `Incidencias registradas: ${totalCount} · ${groups.length} estancia${groups.length === 1 ? "" : "s"}`,
+        margin,
+        y
+      );
       y += 6;
       doc.setFont("helvetica", "normal");
       if (d !== null) {
@@ -1539,63 +1625,90 @@
       doc.setDrawColor(196, 165, 116);
       doc.setLineWidth(0.6);
       doc.line(margin, y, pageW - margin, y);
+      y += 10;
 
-      for (let i = 0; i < sorted.length; i++) {
-        const item = sorted[i];
-        setBusy(true, `PDF: incidencia ${i + 1} de ${sorted.length}…`);
-
-        let imgData = null;
-        let imgProps = null;
-        try {
-          imgData = await preparePdfImage(item.photo);
-          imgProps = doc.getImageProperties(imgData);
-        } catch {
-          imgData = null;
-        }
-
-        const imgMaxW = contentW;
-        const imgMaxH = 78;
-        let drawW = 0, drawH = 0;
-        if (imgData && imgProps) {
-          const ratio = imgProps.width / imgProps.height;
-          drawW = imgMaxW;
-          drawH = drawW / ratio;
-          if (drawH > imgMaxH) {
-            drawH = imgMaxH;
-            drawW = drawH * ratio;
-          }
-        }
-
-        const blockH = 18 + (imgData ? drawH + 6 : 0) + 16;
-        if (y + blockH > pageH - 18) {
+      let done = 0;
+      for (const group of groups) {
+        // Room section header
+        if (y > pageH - 40) {
           doc.addPage();
           y = margin;
         }
-
+        doc.setFillColor(232, 239, 237);
+        doc.roundedRect(margin, y - 4, contentW, 9, 1.5, 1.5, "F");
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         doc.setTextColor(26, 60, 58);
-        doc.text(`${i + 1}. ${item.room}`, margin, y);
-        y += 5;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(106, 124, 126);
-        doc.text(formatDate(item.createdAt), margin, y);
-        y += 6;
+        const roomLabel = `${group.room}  ·  ${group.items.length}`;
+        doc.text(roomLabel, margin + 3, y + 2.2);
+        y += 12;
 
-        if (imgData) {
-          doc.addImage(imgData, "JPEG", margin, y, drawW, drawH);
-          y += drawH + 6;
+        for (let i = 0; i < group.items.length; i++) {
+          const item = group.items[i];
+          done += 1;
+          setBusy(true, `PDF: incidencia ${done} de ${totalCount}…`);
+
+          let imgData = null;
+          let imgProps = null;
+          try {
+            imgData = await preparePdfImage(item.photo);
+            imgProps = doc.getImageProperties(imgData);
+          } catch {
+            imgData = null;
+          }
+
+          const imgMaxW = contentW;
+          const imgMaxH = 72;
+          let drawW = 0, drawH = 0;
+          if (imgData && imgProps) {
+            const ratio = imgProps.width / imgProps.height;
+            drawW = imgMaxW;
+            drawH = drawW / ratio;
+            if (drawH > imgMaxH) {
+              drawH = imgMaxH;
+              drawW = drawH * ratio;
+            }
+          }
+
+          const label = incidentLabel(item, i + 1);
+          const titleLines = doc.splitTextToSize(`${i + 1}. ${label}`, contentW);
+          const titleH = titleLines.length * 5;
+          const blockH = titleH + 6 + (imgData ? drawH + 5 : 0) + 8;
+          if (y + blockH > pageH - 16) {
+            doc.addPage();
+            y = margin;
+            // Repeat room context on new page
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(106, 124, 126);
+            doc.text(`${group.room} (continuación)`, margin, y);
+            y += 7;
+          }
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.setTextColor(20, 38, 40);
+          doc.text(titleLines, margin, y);
+          y += titleH + 2;
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8.5);
+          doc.setTextColor(106, 124, 126);
+          doc.text(formatDate(item.createdAt), margin, y);
+          y += 5;
+
+          if (imgData) {
+            doc.addImage(imgData, "JPEG", margin, y, drawW, drawH);
+            y += drawH + 5;
+          }
+
+          doc.setDrawColor(220, 228, 226);
+          doc.setLineWidth(0.25);
+          doc.line(margin, y, pageW - margin, y);
+          y += 7;
         }
 
-        doc.setTextColor(20, 38, 40);
-        doc.setFontSize(10);
-        y = wrapText(doc, item.comment || "Sin comentario", margin, y, contentW, 5);
-        y += 8;
-        doc.setDrawColor(220, 228, 226);
-        doc.setLineWidth(0.3);
-        doc.line(margin, y, pageW - margin, y);
-        y += 10;
+        y += 4;
       }
 
       const pages = doc.getNumberOfPages();
