@@ -634,22 +634,57 @@
     return { start: dateKey(monday), end: dateKey(endOfWeek(monday)) };
   }
 
+  function expenseDateKey(expense) {
+    return dateKey(new Date(expense.createdAt));
+  }
+
+  function expenseInPeriod(expense, period) {
+    const key = expenseDateKey(expense);
+    return key >= period.start && key <= period.end;
+  }
+
+  function expensesForPeriod(expenses, period) {
+    return (expenses || []).filter((e) => expenseInPeriod(e, period));
+  }
+
+  function stripPeriodExpenses(period) {
+    const { expenses: _nested, ...rest } = period;
+    return rest;
+  }
+
+  function collectNestedExpenses(periods, into = [], seen = new Set()) {
+    for (const p of periods) {
+      if (!Array.isArray(p.expenses)) continue;
+      for (const e of p.expenses) {
+        if (!e || typeof e !== "object") continue;
+        const id = e.id || uid("exp");
+        if (seen.has(id)) continue;
+        seen.add(id);
+        into.push({ ...e, id });
+      }
+    }
+    return into;
+  }
+
   function migrateLegacy() {
     const periods = [];
+    const expenses = [];
+    const seen = new Set();
     try {
       const archive = JSON.parse(localStorage.getItem(LEGACY_ARCHIVE) || "[]");
       if (Array.isArray(archive)) {
         for (const item of archive) {
           const bounds = weekBoundsFromLegacyWeekId(item.weekId);
+          const nested = Array.isArray(item.expenses) ? item.expenses : [];
           periods.push({
             id: uid("per"),
             start: bounds.start,
             end: bounds.end,
             budget: typeof item.budget === "number" ? item.budget : null,
-            expenses: Array.isArray(item.expenses) ? item.expenses : [],
             createdAt: item.archivedAt || new Date().toISOString(),
             legacyWeekId: item.weekId || null,
           });
+          collectNestedExpenses([{ expenses: nested }], expenses, seen);
         }
       }
     } catch { /* ignore */ }
@@ -659,19 +694,43 @@
         const cur = JSON.parse(raw);
         if (cur && typeof cur === "object") {
           const bounds = weekBoundsFromLegacyWeekId(cur.weekId);
+          const nested = Array.isArray(cur.expenses) ? cur.expenses : [];
           periods.unshift({
             id: uid("per"),
             start: bounds.start,
             end: bounds.end,
             budget: typeof cur.budget === "number" ? cur.budget : null,
-            expenses: Array.isArray(cur.expenses) ? cur.expenses : [],
             createdAt: new Date().toISOString(),
             legacyWeekId: cur.weekId || null,
           });
+          collectNestedExpenses([{ expenses: nested }], expenses, seen);
         }
       }
     } catch { /* ignore */ }
-    return periods;
+    return { periods, expenses };
+  }
+
+  function normalizeStore(parsed) {
+    const periodsRaw = Array.isArray(parsed.periods) ? parsed.periods : [];
+    const expenses = Array.isArray(parsed.expenses) ? [...parsed.expenses] : [];
+    const seen = new Set(expenses.map((e) => e?.id).filter(Boolean));
+    collectNestedExpenses(periodsRaw, expenses, seen);
+    const periods = periodsRaw.map((p) => {
+      const clean = stripPeriodExpenses(p);
+      return {
+        id: clean.id || uid("per"),
+        start: clean.start,
+        end: clean.end,
+        budget: typeof clean.budget === "number" ? clean.budget : null,
+        createdAt: clean.createdAt || new Date().toISOString(),
+        legacyWeekId: clean.legacyWeekId || null,
+      };
+    });
+    return {
+      periods,
+      expenses,
+      activeId: parsed.activeId || periods[0]?.id || null,
+    };
   }
 
   function loadStore() {
@@ -680,17 +739,21 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.periods)) {
-          return {
-            periods: parsed.periods,
-            activeId: parsed.activeId || parsed.periods[0]?.id || null,
-          };
+          const store = normalizeStore(parsed);
+          // Persist flattened shape if we lifted nested expenses
+          saveStore(store);
+          return store;
         }
       }
     } catch { /* ignore */ }
 
     const migrated = migrateLegacy();
-    if (migrated.length) {
-      const store = { periods: migrated, activeId: migrated[0].id };
+    if (migrated.periods.length) {
+      const store = {
+        periods: migrated.periods,
+        expenses: migrated.expenses,
+        activeId: migrated.periods[0].id,
+      };
       saveStore(store);
       try {
         localStorage.removeItem(LEGACY_KEY);
@@ -698,20 +761,25 @@
       } catch { /* ignore */ }
       return store;
     }
-    return { periods: [], activeId: null };
+    return { periods: [], expenses: [], activeId: null };
   }
 
   function saveStore(store) {
-    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    const payload = {
+      periods: store.periods.map(stripPeriodExpenses),
+      expenses: store.expenses || [],
+      activeId: store.activeId || null,
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
   }
 
   function activePeriod(store) {
     return store.periods.find((p) => p.id === store.activeId) || null;
   }
 
-  function buildReport(period) {
+  function buildReport(period, allExpenses) {
     const budget = period.budget;
-    const expenses = [...period.expenses].sort(
+    const expenses = [...expensesForPeriod(allExpenses, period)].sort(
       (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
     );
     const totalSpent = expenses.reduce((s, e) => s + (e.amount || 0), 0);
@@ -830,8 +898,12 @@
   function updateActive(mutator) {
     const idx = store.periods.findIndex((p) => p.id === store.activeId);
     if (idx < 0) return;
-    store.periods[idx] = mutator({ ...store.periods[idx], expenses: [...store.periods[idx].expenses] });
+    store.periods[idx] = mutator({ ...store.periods[idx] });
     persist();
+  }
+
+  function periodsCoveringExpense(expense) {
+    return store.periods.filter((p) => expenseInPeriod(expense, p));
   }
 
   function periodBounds() {
@@ -899,13 +971,15 @@
     const sorted = [...store.periods].sort((a, b) => b.start.localeCompare(a.start) || b.createdAt.localeCompare(a.createdAt));
     periodList.innerHTML = sorted
       .map((p) => {
-        const spent = (p.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+        const inPeriod = expensesForPeriod(store.expenses, p);
+        const spent = inPeriod.reduce((s, e) => s + (e.amount || 0), 0);
         const budgetTxt = p.budget != null ? `${formatEuro(spent)} / ${formatEuro(p.budget)}` : formatEuro(spent);
         const active = p.id === store.activeId;
+        const n = inPeriod.length;
         return `<li>
           <button type="button" class="period-item${active ? " is-active" : ""}" data-select-period="${p.id}">
             <span class="title">${escapeHtml(formatRange(p.start, p.end))}</span>
-            <span class="meta">${budgetTxt} · ${(p.expenses || []).length} gastos</span>
+            <span class="meta">${budgetTxt} · ${n} ${n === 1 ? "gasto" : "gastos"}</span>
             ${active ? '<span class="badge">Actual</span>' : ""}
           </button>
         </li>`;
@@ -975,7 +1049,7 @@
       btnEditBudget.hidden = true;
     }
 
-    const report = buildReport(period);
+    const report = buildReport(period, store.expenses);
     if (hasBudget) {
       progressBlock.hidden = false;
       const pct = Math.min(1, report.totalSpent / report.budget);
@@ -1136,7 +1210,6 @@
       start,
       end,
       budget: null,
-      expenses: [],
       createdAt: new Date().toISOString(),
     };
     store.periods.unshift(period);
@@ -1206,28 +1279,30 @@
       note: note || undefined,
       createdAt: new Date(`${day}T12:00:00`).toISOString(),
     };
-    updateActive((p) => ({ ...p, expenses: [expense, ...p.expenses] }));
+    store.expenses = [expense, ...(store.expenses || [])];
+    persist();
     expenseAmount.value = "";
     expenseNote.value = "";
     closeSheets();
     render();
-    toast("Gasto añadido");
+    const covered = periodsCoveringExpense(expense).length;
+    toast(covered > 1 ? `Gasto añadido · cuenta en ${covered} periodos` : "Gasto añadido");
   });
 
   $("#expense-list").addEventListener("click", (e) => {
     const removeBtn = e.target.closest("[data-remove]");
     if (removeBtn) {
-      if (!confirm("¿Quitar este gasto?")) return;
+      if (!confirm("¿Quitar este gasto? Se eliminará de todos los periodos donde cuente.")) return;
       const id = removeBtn.dataset.remove;
-      updateActive((p) => ({ ...p, expenses: p.expenses.filter((x) => x.id !== id) }));
+      store.expenses = (store.expenses || []).filter((x) => x.id !== id);
+      persist();
       render();
       toast("Gasto eliminado");
       return;
     }
     const editBtn = e.target.closest("[data-edit]");
     if (editBtn) {
-      const period = activePeriod(store);
-      const expense = period?.expenses.find((x) => x.id === editBtn.dataset.edit);
+      const expense = (store.expenses || []).find((x) => x.id === editBtn.dataset.edit);
       if (!expense) return;
       $("#edit-id").value = expense.id;
       $("#edit-amount").value = String(expense.amount).replace(".", ",");
@@ -1261,20 +1336,18 @@
     }
     const note = $("#edit-note").value.trim();
     const category = $("#edit-category").value;
-    updateActive((p) => ({
-      ...p,
-      expenses: p.expenses.map((x) =>
-        x.id === id
-          ? {
-              ...x,
-              amount,
-              category,
-              note: note || undefined,
-              createdAt: new Date(`${day}T12:00:00`).toISOString(),
-            }
-          : x
-      ),
-    }));
+    store.expenses = (store.expenses || []).map((x) =>
+      x.id === id
+        ? {
+            ...x,
+            amount,
+            category,
+            note: note || undefined,
+            createdAt: new Date(`${day}T12:00:00`).toISOString(),
+          }
+        : x
+    );
+    persist();
     closeSheets();
     render();
     toast("Gasto actualizado");
@@ -1283,10 +1356,15 @@
   btnReset.addEventListener("click", () => {
     const period = activePeriod(store);
     if (!period) return;
-    if (!confirm("¿Vaciar este periodo? Se borrarán el tope y todos sus gastos. El periodo seguirá en el historial.")) {
+    if (
+      !confirm(
+        "¿Vaciar este periodo? Se borrará el tope y los gastos de estas fechas (también dejarán de contar en otros periodos que los compartan). El periodo seguirá en el historial."
+      )
+    ) {
       return;
     }
-    updateActive((p) => ({ ...p, budget: null, expenses: [] }));
+    store.expenses = (store.expenses || []).filter((e) => !expenseInPeriod(e, period));
+    updateActive((p) => ({ ...p, budget: null }));
     budgetCollapsed = false;
     budgetInput.value = "";
     render();
