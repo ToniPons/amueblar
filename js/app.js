@@ -58,12 +58,16 @@ function clearFilters() {
   filters.estado = 'Todos';
   filters.listaCompra = false;
   filters.query = '';
-  const search = /** @type {HTMLInputElement|null} */ (
-    document.getElementById('search-input')
-  );
-  if (search) search.value = '';
   document.getElementById('btn-lista-compra')?.classList.remove('active');
   paint();
+}
+
+function activeFilterSummary() {
+  const parts = [];
+  if (filters.estancia && filters.estancia !== 'Todos') parts.push(filters.estancia);
+  if (filters.categoria && filters.categoria !== 'Todos') parts.push(filters.categoria);
+  if (filters.estado && filters.estado !== 'Todos') parts.push(filters.estado);
+  return parts;
 }
 
 function recentStores() {
@@ -84,15 +88,21 @@ function syncFilterChrome() {
   const moreBtn = document.getElementById('btn-more-filters');
   const estadoRow = document.getElementById('filter-estado-row');
   const listaBanner = document.getElementById('lista-banner');
+  const active = activeFilterSummary();
 
   if (extra) extra.hidden = !filtersExpanded;
   if (moreBtn) {
     moreBtn.classList.toggle('active', filtersExpanded);
-    moreBtn.textContent = filtersExpanded ? 'Menos filtros' : 'Más filtros';
-    const secondaryActive =
-      (filters.categoria && filters.categoria !== 'Todos') ||
-      (filters.estado && filters.estado !== 'Todos');
-    moreBtn.classList.toggle('has-dot', secondaryActive && !filtersExpanded);
+    moreBtn.setAttribute('aria-expanded', filtersExpanded ? 'true' : 'false');
+    if (filtersExpanded) {
+      moreBtn.textContent = 'Cerrar';
+    } else if (active.length) {
+      moreBtn.textContent =
+        active.length === 1 ? active[0] : `Filtros · ${active.length}`;
+    } else {
+      moreBtn.textContent = 'Filtros';
+    }
+    moreBtn.classList.toggle('has-dot', active.length > 0 && !filtersExpanded);
   }
   if (estadoRow) estadoRow.hidden = Boolean(filters.listaCompra);
   if (listaBanner) listaBanner.hidden = !filters.listaCompra;
@@ -496,11 +506,6 @@ async function pasteSync() {
 }
 
 document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
-
-document.getElementById('search-input')?.addEventListener('input', (ev) => {
-  filters.query = /** @type {HTMLInputElement} */ (ev.target).value;
-  paint();
-});
 
 document.getElementById('btn-more-filters')?.addEventListener('click', () => {
   filtersExpanded = !filtersExpanded;

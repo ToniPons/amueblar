@@ -76,49 +76,18 @@ body::before {
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
-  padding: 0 1rem calc(6.5rem + env(safe-area-inset-bottom));
-}
-
-.sticky-top {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  padding-top: env(safe-area-inset-top);
-  margin: 0 -1rem 0.75rem;
-  padding-inline: 1rem;
-  background: linear-gradient(
-    180deg,
-    rgba(238, 243, 239, 0.96) 0%,
-    rgba(238, 243, 239, 0.92) 70%,
-    rgba(238, 243, 239, 0) 100%
-  );
-  backdrop-filter: blur(12px);
+  padding: calc(0.55rem + env(safe-area-inset-top)) 1rem
+    calc(6.5rem + env(safe-area-inset-bottom));
 }
 
 .header-panel {
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 0 0 var(--radius) var(--radius);
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 0.5rem 0.75rem 0.65rem;
+  padding: 0.45rem 0.55rem 0.5rem;
+  margin-bottom: 0.45rem;
   animation: rise-in 0.45s ease-out both;
-}
-
-.brand-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.4rem;
-}
-
-.brand {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  margin: 0;
-  color: var(--ink);
 }
 
 .icon-btn {
@@ -139,13 +108,21 @@ body::before {
 }
 
 .budget-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.35rem;
 }
 
-.budget-row.has-cap {
-  grid-template-columns: 1fr 1fr;
+.budget-row .budget-card {
+  flex: 1 1 calc(50% - 1.6rem);
+  min-width: 0;
+}
+
+.budget-row .budget-settings {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
 }
 
 .header-panel.over-budget {
@@ -239,15 +216,18 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  margin-top: 0.45rem;
-  padding-bottom: 0.3rem;
+  margin-bottom: 0.55rem;
   animation: rise-in 0.45s ease-out 0.06s both;
 }
 
-.filters-extra {
+.filters-panel {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  padding: 0.45rem 0.5rem 0.5rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(28, 36, 33, 0.08);
+  border-radius: 12px;
 }
 
 .filter-row {
@@ -321,16 +301,22 @@ body::before {
 .filter-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.5rem;
-  min-height: 1.25rem;
-  padding: 0.15rem 0 0;
+  min-height: 0;
+  padding: 0.1rem 0 0;
 }
 
 .result-count {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.toolbar-count {
+  margin-left: auto;
+  padding-left: 0.25rem;
 }
 
 .clear-filters {
@@ -1038,11 +1024,10 @@ body::before {
   flex-wrap: nowrap;
   gap: 0.3rem;
   align-items: center;
-  margin-top: 0.15rem;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.1rem;
+  padding-bottom: 0.05rem;
 }
 
 .toolbar::-webkit-scrollbar {
@@ -1148,31 +1133,6 @@ body::before {
   opacity: 0;
   overflow: hidden;
   z-index: -1;
-}
-
-.budget-help {
-  margin: 0.35rem 0 0;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--ink-muted);
-  line-height: 1.3;
-}
-
-.search-row {
-  margin-bottom: 0.15rem;
-}
-
-.search-row input {
-  width: 100%;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid rgba(28, 36, 33, 0.14);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--ink);
-  min-height: 2.5rem;
 }
 
 .sys-banner {
@@ -1409,12 +1369,6 @@ body::before {
   white-space: nowrap;
 }
 
-@media (max-width: 380px) {
-  .budget-help {
-    display: none;
-  }
-}
-
 .detail-notes p {
   margin: 0;
   font-size: 0.9rem;
@@ -1537,12 +1491,6 @@ button.resumen-row:active {
   color: var(--ink);
   resize: vertical;
   min-height: 4.5rem;
-}
-
-@media (min-width: 480px) {
-  .header-panel {
-    border-radius: var(--radius);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -30,117 +30,96 @@
   </head>
   <body>
     <div class="app-shell">
-      <div class="sticky-top">
-        <header class="header-panel" aria-label="Presupuesto">
-          <div class="brand-row">
-            <h1 class="brand">Amueblar</h1>
-            <button type="button" class="icon-btn" id="btn-settings" aria-label="Ajustes">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                />
-                <path
-                  d="M19.4 13.2a1.4 1.4 0 0 0 .28 1.54l.06.06a1.7 1.7 0 1 1-2.4 2.4l-.06-.06a1.4 1.4 0 0 0-1.54-.28 1.4 1.4 0 0 0-.85 1.28V18a1.7 1.7 0 1 1-3.4 0v-.08a1.4 1.4 0 0 0-.9-1.28 1.4 1.4 0 0 0-1.54.28l-.06.06a1.7 1.7 0 1 1-2.4-2.4l.06-.06a1.4 1.4 0 0 0 .28-1.54 1.4 1.4 0 0 0-1.28-.85H6a1.7 1.7 0 1 1 0-3.4h.08a1.4 1.4 0 0 0 1.28-.9 1.4 1.4 0 0 0-.28-1.54l-.06-.06a1.7 1.7 0 1 1 2.4-2.4l.06.06a1.4 1.4 0 0 0 1.54.28h.05A1.4 1.4 0 0 0 12 4.08V4a1.7 1.7 0 1 1 3.4 0v.08a1.4 1.4 0 0 0 .85 1.28 1.4 1.4 0 0 0 1.54-.28l.06-.06a1.7 1.7 0 1 1 2.4 2.4l-.06.06a1.4 1.4 0 0 0-.28 1.54v.05c.2.5.66.85 1.2.85H20a1.7 1.7 0 1 1 0 3.4h-.08a1.4 1.4 0 0 0-1.28.9Z"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
+      <header class="header-panel" aria-label="Presupuesto">
+        <div class="budget-row" id="budget-row">
+          <div class="budget-card" title="Seleccionado + comprado">
+            <div class="label">Selección</div>
+            <div class="value" id="budget-total">0,00 €</div>
           </div>
-
-          <div class="budget-row" id="budget-row">
-            <div class="budget-card" title="Incluye seleccionado y comprado">
-              <div class="label">Al tope</div>
-              <div class="value" id="budget-total">0,00 €</div>
-            </div>
-            <div class="budget-card real">
-              <div class="label">Comprado</div>
-              <div class="value" id="budget-real">0,00 €</div>
-            </div>
-            <div class="budget-card budget-cap-card" id="budget-cap-card" hidden>
-              <div class="label">Tope</div>
-              <div class="value" id="budget-cap">—</div>
-            </div>
-            <div class="budget-card budget-remain-card" id="budget-remain-card" hidden>
-              <div class="label">Queda</div>
-              <div class="value" id="budget-remain">—</div>
-            </div>
+          <div class="budget-card real">
+            <div class="label">Comprado</div>
+            <div class="value" id="budget-real">0,00 €</div>
           </div>
-          <p class="budget-help">
-            «Al tope» = seleccionado + comprado (lo que cuenta contra el presupuesto).
-          </p>
-
-          <button type="button" class="budget-set-tope" id="btn-set-tope" hidden>
-            Definir tope de presupuesto
+          <div class="budget-card budget-cap-card" id="budget-cap-card" hidden>
+            <div class="label">Tope</div>
+            <div class="value" id="budget-cap">—</div>
+          </div>
+          <div class="budget-card budget-remain-card" id="budget-remain-card" hidden>
+            <div class="label">Queda</div>
+            <div class="value" id="budget-remain">—</div>
+          </div>
+          <button type="button" class="icon-btn budget-settings" id="btn-settings" aria-label="Ajustes">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+                stroke="currentColor"
+                stroke-width="1.8"
+              />
+              <path
+                d="M19.4 13.2a1.4 1.4 0 0 0 .28 1.54l.06.06a1.7 1.7 0 1 1-2.4 2.4l-.06-.06a1.4 1.4 0 0 0-1.54-.28 1.4 1.4 0 0 0-.85 1.28V18a1.7 1.7 0 1 1-3.4 0v-.08a1.4 1.4 0 0 0-.9-1.28 1.4 1.4 0 0 0-1.54.28l-.06.06a1.7 1.7 0 1 1-2.4-2.4l.06-.06a1.4 1.4 0 0 0 .28-1.54 1.4 1.4 0 0 0-1.28-.85H6a1.7 1.7 0 1 1 0-3.4h.08a1.4 1.4 0 0 0 1.28-.9 1.4 1.4 0 0 0-.28-1.54l-.06-.06a1.7 1.7 0 1 1 2.4-2.4l.06.06a1.4 1.4 0 0 0 1.54.28h.05A1.4 1.4 0 0 0 12 4.08V4a1.7 1.7 0 1 1 3.4 0v.08a1.4 1.4 0 0 0 .85 1.28 1.4 1.4 0 0 0 1.54-.28l.06-.06a1.7 1.7 0 1 1 2.4 2.4l-.06.06a1.4 1.4 0 0 0-.28 1.54v.05c.2.5.66.85 1.2.85H20a1.7 1.7 0 1 1 0 3.4h-.08a1.4 1.4 0 0 0-1.28.9Z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+              />
+            </svg>
           </button>
+        </div>
 
-          <div class="budget-progress" id="budget-progress" hidden>
-            <div class="budget-progress-track" aria-hidden="true">
-              <div class="budget-progress-fill" id="budget-progress-fill"></div>
-            </div>
-            <span class="budget-progress-label" id="budget-progress-label"></span>
+        <button type="button" class="budget-set-tope" id="btn-set-tope" hidden>
+          Definir tope de presupuesto
+        </button>
+
+        <div class="budget-progress" id="budget-progress" hidden>
+          <div class="budget-progress-track" aria-hidden="true">
+            <div class="budget-progress-fill" id="budget-progress-fill"></div>
           </div>
-        </header>
+          <span class="budget-progress-label" id="budget-progress-label"></span>
+        </div>
+      </header>
 
-        <section class="filters" aria-label="Filtros">
-          <div class="search-row">
-            <label class="sr-only" for="search-input">Buscar</label>
-            <input
-              id="search-input"
-              type="search"
-              placeholder="Buscar nombre, tienda, notas…"
-              autocomplete="off"
-            />
-          </div>
+      <section class="filters" aria-label="Filtros">
+        <div class="toolbar">
+          <button type="button" class="tool-btn tool-toggle" id="btn-more-filters" aria-expanded="false">
+            Filtros
+          </button>
+          <label class="toolbar-sort">
+            <span class="sr-only">Orden</span>
+            <select id="sort-select" aria-label="Ordenar">
+              <option value="fecha">Recientes</option>
+              <option value="precio-asc">Precio ↑</option>
+              <option value="precio-desc">Precio ↓</option>
+              <option value="nombre">Nombre</option>
+            </select>
+          </label>
+          <button type="button" class="tool-btn" id="btn-lista-compra">Lista</button>
+          <button type="button" class="tool-btn" id="btn-resumen">Resumen</button>
+          <span id="result-count" class="result-count toolbar-count" aria-live="polite"></span>
+        </div>
 
+        <div class="filters-panel" id="filters-extra" hidden>
           <div class="filter-row">
             <span class="filter-label">Estancia</span>
             <div id="filter-estancia" class="chip-scroll" role="listbox" aria-label="Estancia"></div>
           </div>
-
-          <div class="filters-extra" id="filters-extra" hidden>
-            <div class="filter-row">
-              <span class="filter-label">Categoría</span>
-              <div id="filter-categoria" class="chip-scroll" role="listbox" aria-label="Categoría"></div>
-            </div>
-            <div class="filter-row" id="filter-estado-row">
-              <span class="filter-label">Estado</span>
-              <div id="filter-estado" class="chip-scroll" role="listbox" aria-label="Estado"></div>
-            </div>
+          <div class="filter-row">
+            <span class="filter-label">Categoría</span>
+            <div id="filter-categoria" class="chip-scroll" role="listbox" aria-label="Categoría"></div>
           </div>
-
-          <div class="toolbar">
-            <button type="button" class="tool-btn tool-toggle" id="btn-more-filters">
-              Más filtros
-            </button>
-            <label class="toolbar-sort">
-              <span class="sr-only">Orden</span>
-              <select id="sort-select" aria-label="Ordenar">
-                <option value="fecha">Recientes</option>
-                <option value="precio-asc">Precio ↑</option>
-                <option value="precio-desc">Precio ↓</option>
-                <option value="nombre">Nombre</option>
-              </select>
-            </label>
-            <button type="button" class="tool-btn" id="btn-lista-compra">Lista</button>
-            <button type="button" class="tool-btn" id="btn-resumen">Resumen</button>
+          <div class="filter-row" id="filter-estado-row">
+            <span class="filter-label">Estado</span>
+            <div id="filter-estado" class="chip-scroll" role="listbox" aria-label="Estado"></div>
           </div>
-
           <div class="filter-meta">
-            <span id="result-count" class="result-count" aria-live="polite"></span>
             <button type="button" class="clear-filters" id="clear-filters" hidden>
               Limpiar filtros
             </button>
           </div>
+        </div>
 
-          <div class="mode-banner" id="lista-banner" hidden>
-            Lista de la compra · agrupada por tienda · toca ✓ para marcar comprado
-          </div>
-        </section>
-      </div>
+        <div class="mode-banner" id="lista-banner" hidden>
+          Lista de la compra · agrupada por tienda · toca ✓ para marcar comprado
+        </div>
+      </section>
 
       <main>
         <div id="product-grid" class="grid" aria-live="polite"></div>

@@ -242,7 +242,7 @@ export function renderGrid(productos, filters, sort, handlers) {
     if (hasFilters) {
       empty.innerHTML = `
         <h2>Nada con estos filtros</h2>
-        <p>Prueba otra búsqueda o limpia los filtros.</p>
+        <p>Prueba otra combinación o limpia los filtros.</p>
         <button type="button" class="btn btn-secondary" id="empty-clear">Limpiar filtros</button>
       `;
       empty.querySelector('#empty-clear')?.addEventListener('click', () => {
