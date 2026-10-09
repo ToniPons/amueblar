@@ -27,9 +27,15 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/app.css" />
+    <link rel="stylesheet" href="./shared/app-switch.css" />
   </head>
   <body>
     <div class="app-shell">
+      <nav class="app-switch" aria-label="Cambiar de aplicación">
+        <a class="app-switch__item is-active" href="./" aria-current="page">Amueblar</a>
+        <a class="app-switch__item" href="./parte/">Parte</a>
+      </nav>
+
       <header class="header-panel" aria-label="Presupuesto">
         <div class="budget-row" id="budget-row">
           <div class="budget-card" title="Seleccionado + comprado">
@@ -292,11 +298,6 @@
           <button type="button" class="sheet-close" id="settings-close" aria-label="Cerrar">×</button>
         </div>
         <h2 id="settings-title">Ajustes</h2>
-
-        <a class="app-nav-link" href="./parte/">
-          <span class="app-nav-title">Parte</span>
-          <span class="app-nav-desc">Incidencias postventa</span>
-        </a>
 
         <div class="form-group">
           <label for="settings-tope">Tope de presupuesto (€)</label>

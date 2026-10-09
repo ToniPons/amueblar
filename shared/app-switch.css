@@ -1,0 +1,72 @@
+/* Shared Amueblar ↔ Parte app switcher — keep identical in both apps */
+.app-switch {
+  --as-ink: #1a2c28;
+  --as-muted: #4a5c58;
+  --as-track: rgba(26, 44, 40, 0.07);
+  --as-line: rgba(26, 44, 40, 0.1);
+  --as-active: #1a2c28;
+  --as-active-text: #f3f7f5;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: 100%;
+  margin: 0 0 0.7rem;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--as-track);
+  border: 1px solid var(--as-line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-switch *,
+.app-switch *::before,
+.app-switch *::after {
+  box-sizing: border-box;
+}
+
+.app-switch__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  color: var(--as-muted);
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-switch__item:active {
+  transform: scale(0.98);
+}
+
+.app-switch__item.is-active {
+  background: var(--as-active);
+  color: var(--as-active-text);
+  box-shadow: 0 6px 16px rgba(26, 44, 40, 0.18);
+  pointer-events: none;
+}
+
+.app-switch__item:not(.is-active):hover {
+  color: var(--as-ink);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-switch__item {
+    transition: none;
+  }
+}
