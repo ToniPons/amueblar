@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#1a3c3a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Parte" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
   <meta name="description" content="Parte — rastreador de incidencias postventa para obra nueva" />
   <title>Parte — Incidencias postventa</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,19 +21,18 @@
       --ink-soft: #3a4f52;
       --muted: #6a7c7e;
       --line: rgba(20, 38, 40, 0.12);
-      --surface: rgba(255, 255, 255, 0.72);
-      --surface-solid: #f4f7f6;
+      --surface: rgba(255, 255, 255, 0.78);
       --accent: #1a3c3a;
       --accent-2: #2f6b5f;
       --warm: #c4a574;
       --danger: #9b3b32;
-      --ok: #2f6b5f;
       --radius: 18px;
       --shadow: 0 18px 40px rgba(20, 38, 40, 0.08);
       --font-display: "Fraunces", Georgia, serif;
       --font-body: "Sora", "Segoe UI", sans-serif;
       --safe-b: env(safe-area-inset-bottom, 0px);
       --safe-t: env(safe-area-inset-top, 0px);
+      --dock-h: 72px;
     }
 
     * { box-sizing: border-box; }
@@ -46,6 +49,7 @@
       background-attachment: fixed;
       -webkit-font-smoothing: antialiased;
     }
+    body.sheet-open { overflow: hidden; touch-action: none; }
 
     body::before {
       content: "";
@@ -63,55 +67,55 @@
     button, input, select, textarea { font: inherit; color: inherit; }
     button { cursor: pointer; border: none; background: none; }
     img { max-width: 100%; display: block; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); border: 0;
+    }
 
     .app {
       width: min(560px, 100%);
       margin: 0 auto;
-      padding: calc(20px + var(--safe-t)) 18px calc(110px + var(--safe-b));
+      padding: calc(16px + var(--safe-t)) 16px calc(var(--dock-h) + 28px + var(--safe-b));
       position: relative;
       z-index: 1;
     }
 
     /* —— Hero —— */
     .hero {
-      min-height: calc(100dvh - 140px);
+      min-height: calc(100dvh - 120px);
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      padding: 12px 4px 28px;
+      padding: 12px 2px 24px;
       animation: rise 0.7s ease both;
     }
     .hero-mark {
       font-family: var(--font-display);
       font-weight: 700;
-      font-size: clamp(3.6rem, 16vw, 5.2rem);
+      font-size: clamp(3.4rem, 15vw, 5rem);
       line-height: 0.92;
       letter-spacing: -0.03em;
       color: var(--accent);
-      margin: 0 0 18px;
+      margin: 0 0 16px;
     }
     .hero-mark span {
       display: block;
       font-size: 0.28em;
       font-family: var(--font-body);
       font-weight: 500;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--warm);
       margin-bottom: 10px;
     }
     .hero p {
-      margin: 0 0 28px;
-      max-width: 28ch;
-      font-size: 1.05rem;
+      margin: 0 0 26px;
+      max-width: 30ch;
+      font-size: 1.02rem;
       line-height: 1.45;
       color: var(--ink-soft);
     }
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
     @keyframes rise {
       from { opacity: 0; transform: translateY(18px); }
@@ -126,7 +130,7 @@
       50% { transform: scale(1.03); }
     }
     @keyframes slide-up {
-      from { opacity: 0; transform: translateY(24px); }
+      from { opacity: 0; transform: translateY(16px); }
       to { opacity: 1; transform: none; }
     }
 
@@ -140,7 +144,7 @@
       border-radius: 999px;
       font-weight: 600;
       font-size: 0.95rem;
-      transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+      transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
     }
     .btn:active { transform: scale(0.97); }
     .btn-primary {
@@ -161,29 +165,42 @@
     }
     .btn-block { width: 100%; }
     .btn:disabled {
-      opacity: 0.45;
+      opacity: 0.4;
       cursor: not-allowed;
       transform: none;
+      box-shadow: none;
     }
 
-    /* —— Screens —— */
-    .screen { display: none; animation: fade-in 0.35s ease both; }
+    .screen { display: none; animation: fade-in 0.3s ease both; }
     .screen.active { display: block; }
 
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 18px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
     .brand-mini {
       font-family: var(--font-display);
       font-weight: 650;
-      font-size: 1.55rem;
+      font-size: 1.5rem;
       color: var(--accent);
       letter-spacing: -0.02em;
     }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .icon-btn {
+      min-height: 40px;
+      min-width: 40px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.55);
+      border: 1px solid var(--line);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
     .chip {
       display: inline-flex;
       align-items: center;
@@ -192,33 +209,29 @@
       border-radius: 999px;
       background: rgba(47, 107, 95, 0.12);
       color: var(--accent-2);
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 600;
+      white-space: nowrap;
     }
-    .chip.warn {
-      background: rgba(196, 165, 116, 0.28);
-      color: #7a5a28;
-    }
+    .chip.warn { background: rgba(196, 165, 116, 0.28); color: #7a5a28; }
     .chip.alert {
       background: rgba(155, 59, 50, 0.12);
       color: var(--danger);
       animation: pulse-soft 1.8s ease infinite;
     }
 
-    .section-head {
-      margin: 8px 0 14px;
-    }
+    .section-head { margin: 4px 0 12px; }
     .section-head h2 {
-      margin: 0 0 6px;
+      margin: 0 0 4px;
       font-family: var(--font-display);
-      font-size: 1.55rem;
+      font-size: 1.45rem;
       font-weight: 650;
       letter-spacing: -0.02em;
     }
     .section-head p {
       margin: 0;
       color: var(--muted);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       line-height: 1.4;
     }
 
@@ -226,20 +239,18 @@
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      padding: 16px;
+      padding: 14px;
       backdrop-filter: blur(12px);
       box-shadow: var(--shadow);
-      margin-bottom: 14px;
-      animation: slide-up 0.4s ease both;
+      margin-bottom: 12px;
+      animation: slide-up 0.35s ease both;
     }
 
-    label.field {
+    label.field { display: block; margin-bottom: 12px; }
+    label.field > span,
+    .field-label {
       display: block;
-      margin-bottom: 12px;
-    }
-    label.field > span {
-      display: block;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 600;
       color: var(--muted);
       margin-bottom: 6px;
@@ -250,85 +261,125 @@
     .field textarea {
       width: 100%;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.9);
       border-radius: 12px;
       padding: 12px 14px;
       outline: none;
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    .field textarea { min-height: 88px; resize: vertical; }
+    .field textarea { min-height: 84px; resize: vertical; }
     .field input:focus,
     .field select:focus,
     .field textarea:focus {
       border-color: rgba(47, 107, 95, 0.55);
       box-shadow: 0 0 0 3px rgba(47, 107, 95, 0.12);
     }
+    .field-hint {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-    .row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+    .stats-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+    .stats-line strong {
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 650;
+    }
+
+    .filter-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 0 10px;
+      margin: 0 -2px 4px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .filter-scroll::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      flex: 0 0 auto;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.65);
+      color: var(--ink-soft);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .filter-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #f7faf9;
     }
 
     .empty {
       text-align: center;
-      padding: 36px 18px;
+      padding: 28px 14px 18px;
       color: var(--muted);
     }
     .empty strong {
       display: block;
       font-family: var(--font-display);
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       color: var(--ink);
       margin-bottom: 8px;
     }
+    .empty .btn { margin-top: 16px; }
 
     .incident {
       display: grid;
-      grid-template-columns: 84px 1fr;
+      grid-template-columns: 76px 1fr;
       gap: 12px;
       padding: 12px 0;
       border-bottom: 1px solid var(--line);
-      animation: slide-up 0.35s ease both;
+      animation: slide-up 0.3s ease both;
     }
     .incident:last-child { border-bottom: none; padding-bottom: 0; }
-    .incident:first-child { padding-top: 0; }
+    .incident:first-child { padding-top: 2px; }
     .incident-thumb {
-      width: 84px;
-      height: 84px;
+      width: 76px;
+      height: 76px;
       border-radius: 14px;
       object-fit: cover;
       background: #d7e0de;
     }
     .incident-body h3 {
       margin: 0 0 4px;
-      font-size: 0.98rem;
+      font-size: 0.95rem;
       font-weight: 600;
     }
     .incident-body p {
-      margin: 0 0 8px;
+      margin: 0 0 6px;
       color: var(--ink-soft);
-      font-size: 0.88rem;
+      font-size: 0.86rem;
       line-height: 1.35;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .meta {
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-    .incident-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
+    .meta { font-size: 0.72rem; color: var(--muted); }
+    .incident-actions { display: flex; gap: 12px; margin-top: 8px; }
     .linkish {
       font-size: 0.82rem;
       font-weight: 600;
       color: var(--accent-2);
       padding: 0;
+      min-height: 32px;
     }
     .linkish.danger { color: var(--danger); }
 
@@ -336,15 +387,15 @@
       position: fixed;
       left: 12px;
       right: 12px;
-      bottom: calc(14px + var(--safe-b));
+      bottom: calc(12px + var(--safe-b));
       width: auto;
       max-width: 520px;
       margin-inline: auto;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1.35fr;
       gap: 8px;
       z-index: 20;
-      animation: rise 0.5s 0.15s ease both;
+      animation: rise 0.45s 0.1s ease both;
     }
     .dock .btn {
       min-height: 52px;
@@ -359,7 +410,7 @@
       .dock .btn { font-size: 0.8rem; padding: 0 8px; }
     }
 
-    /* —— Capture sheet —— */
+    /* —— Sheet —— */
     .sheet-backdrop {
       position: fixed;
       inset: 0;
@@ -369,24 +420,23 @@
       pointer-events: none;
       transition: opacity 0.25s ease;
     }
-    .sheet-backdrop.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     .sheet {
       position: fixed;
       left: 50%;
       bottom: 0;
       transform: translate(-50%, 110%);
       width: min(560px, 100%);
-      max-height: min(92dvh, 820px);
+      max-height: min(94dvh, 860px);
       overflow: auto;
+      overscroll-behavior: contain;
       background: #f7f9f8;
       border-radius: 24px 24px 0 0;
-      padding: 14px 18px calc(24px + var(--safe-b));
+      padding: 12px 16px calc(20px + var(--safe-b));
       z-index: 50;
       transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
       box-shadow: 0 -20px 50px rgba(0,0,0,0.18);
+      -webkit-overflow-scrolling: touch;
     }
     .sheet.open { transform: translate(-50%, 0); }
     .sheet-handle {
@@ -394,42 +444,110 @@
       height: 4px;
       border-radius: 999px;
       background: rgba(20,38,40,0.18);
-      margin: 0 auto 14px;
+      margin: 0 auto 12px;
     }
 
-    .photo-stage {
+    /* Native photo slot (Amueblar-style) */
+    .photo-slot {
       position: relative;
       aspect-ratio: 4 / 3;
       border-radius: 16px;
-      overflow: hidden;
+      border: 2px dashed rgba(20, 38, 40, 0.18);
       background:
-        linear-gradient(135deg, rgba(26,60,58,0.08), rgba(196,165,116,0.12)),
-        #dce5e3;
-      margin-bottom: 14px;
+        linear-gradient(135deg, rgba(26,60,58,0.07), rgba(196,165,116,0.12)),
+        #e4ecea;
+      overflow: hidden;
+      margin-bottom: 10px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      cursor: pointer;
     }
-    .photo-stage img,
-    .photo-stage video {
+    .photo-slot.has-image { border-style: solid; border-color: transparent; }
+    .photo-slot-label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 16px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .photo-slot-label strong {
+      color: var(--ink);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .photo-slot-label small {
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+    .photo-slot img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    .photo-placeholder {
+    .photo-slot.has-image .photo-slot-label { display: none; }
+    .photo-slot-actions {
       position: absolute;
-      inset: 0;
-      display: grid;
-      place-content: center;
-      text-align: center;
-      color: var(--muted);
-      padding: 20px;
-      font-size: 0.92rem;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      display: none;
+      gap: 8px;
+      z-index: 2;
     }
-    .capture-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .photo-slot.has-image .photo-slot-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .photo-slot-actions .btn {
+      min-height: 40px;
+      font-size: 0.8rem;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    }
+    .photo-slot-actions .btn-primary { background: rgba(26, 60, 58, 0.92); }
+    .photo-slot-actions .btn-ghost {
+      background: rgba(255,255,255,0.92);
+      color: var(--danger);
+      border-color: transparent;
+    }
+
+    .capture-alt {
+      display: flex;
+      justify-content: center;
+      margin: 0 0 14px;
+    }
+    .capture-alt button {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--accent-2);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      min-height: 36px;
+      padding: 0 8px;
+    }
+
+    .room-chips {
+      display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 12px;
     }
-    .hidden-file { display: none; }
+    .room-chip {
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.85);
+      color: var(--ink-soft);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .room-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #f7faf9;
+    }
 
     .rooms-edit {
       display: flex;
@@ -453,6 +571,17 @@
       font-size: 1rem;
       line-height: 1;
       padding: 0 2px;
+    }
+
+    .sheet-actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .sheet-actions-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
 
     .toast {
@@ -500,31 +629,14 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .stats-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 12px;
-      margin-bottom: 10px;
-      font-size: 0.88rem;
-      color: var(--muted);
-    }
-    .stats-line strong {
-      color: var(--ink);
-      font-family: var(--font-display);
-      font-size: 1.2rem;
-      font-weight: 650;
-    }
-
     @media (min-width: 640px) {
-      .app { padding-top: 32px; }
-      .hero { min-height: 70dvh; }
+      .app { padding-top: 28px; }
+      .hero { min-height: 68dvh; }
     }
   </style>
 </head>
 <body>
   <div class="app" id="app">
-    <!-- HOME -->
     <section class="screen active" id="screen-home" aria-label="Inicio">
       <div class="hero">
         <h1 class="hero-mark"><span>Postventa obra nueva</span>Parte</h1>
@@ -536,11 +648,13 @@
       </div>
     </section>
 
-    <!-- LIST -->
     <section class="screen" id="screen-list" aria-label="Incidencias">
       <div class="topbar">
         <div class="brand-mini">Parte</div>
-        <div id="days-chip" class="chip" hidden></div>
+        <div class="topbar-actions">
+          <div id="days-chip" class="chip" hidden></div>
+          <button type="button" class="icon-btn" id="btn-open-config" aria-label="Datos del piso">Piso</button>
+        </div>
       </div>
 
       <div class="section-head">
@@ -553,23 +667,17 @@
           <span>Registradas</span>
           <strong id="count-label">0</strong>
         </div>
+        <div class="filter-scroll" id="filter-scroll" hidden></div>
         <div id="incident-list"></div>
         <div class="empty" id="empty-state">
-          <strong>Todavía no hay nada</strong>
-          Pulsa «Nueva incidencia» y fotografía el desperfecto.
+          <strong id="empty-title">Todavía no hay nada</strong>
+          <span id="empty-copy">Fotografía el primer desperfecto mientras recorres el piso.</span>
+          <br />
+          <button type="button" class="btn btn-primary" id="btn-empty-new">Fotografiar desperfecto</button>
         </div>
-      </div>
-
-      <div class="panel" style="animation-delay: 0.05s">
-        <div class="section-head" style="margin-top:0">
-          <h2 style="font-size:1.2rem">Proyecto</h2>
-          <p>Datos opcionales para la portada del PDF.</p>
-        </div>
-        <button type="button" class="btn btn-ghost btn-block" id="btn-open-config">Editar datos del piso</button>
       </div>
     </section>
 
-    <!-- CONFIG -->
     <section class="screen" id="screen-config" aria-label="Configuración">
       <div class="topbar">
         <button type="button" class="btn btn-ghost" id="btn-config-back" style="min-height:40px;padding:0 14px">← Volver</button>
@@ -587,7 +695,7 @@
           <label class="field"><span>N.º referencia</span><input id="cfg-ref" placeholder="Expediente u obra" /></label>
           <label class="field"><span>Fecha de entrega</span><input id="cfg-entrega" type="date" /></label>
         </div>
-        <p style="margin:0 0 12px;font-size:0.82rem;color:var(--muted)">La ventana habitual es de 15 días desde la entrega. El contador te avisa en la lista.</p>
+        <p style="margin:0 0 12px;font-size:0.82rem;color:var(--muted)">Ventana habitual: 15 días desde la entrega. El contador te avisa en la lista.</p>
         <button type="button" class="btn btn-primary btn-block" id="btn-save-config">Guardar</button>
       </div>
 
@@ -599,7 +707,7 @@
         <div class="rooms-edit" id="rooms-edit"></div>
         <label class="field"><span>Añadir estancia</span>
           <div style="display:flex;gap:8px">
-            <input id="new-room" placeholder="Ej. Lavadero" style="flex:1;border:1px solid var(--line);background:rgba(255,255,255,0.85);border-radius:12px;padding:12px 14px" />
+            <input id="new-room" placeholder="Ej. Lavadero" style="flex:1;border:1px solid var(--line);background:rgba(255,255,255,0.9);border-radius:12px;padding:12px 14px" />
             <button type="button" class="btn btn-ghost" id="btn-add-room" style="min-height:46px">Añadir</button>
           </div>
         </label>
@@ -612,43 +720,48 @@
     <button type="button" class="btn btn-primary" id="btn-new">Nueva incidencia</button>
   </div>
 
-  <!-- Capture / edit sheet -->
   <div class="sheet-backdrop" id="sheet-backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-    <div class="sheet-handle"></div>
+    <div class="sheet-handle" aria-hidden="true"></div>
     <div class="section-head" style="margin-top:0">
-      <h2 id="sheet-title" style="font-size:1.35rem">Nueva incidencia</h2>
-      <p>Foto, estancia y un comentario breve.</p>
+      <h2 id="sheet-title" style="font-size:1.3rem">Nueva incidencia</h2>
+      <p>Foto con la cámara del móvil, estancia y una nota breve.</p>
     </div>
 
-    <div class="photo-stage" id="photo-stage">
-      <div class="photo-placeholder" id="photo-placeholder">La foto aparecerá aquí</div>
-      <img id="photo-preview" alt="Vista previa" hidden />
-      <video id="live-video" playsinline muted hidden></video>
+    <!-- Native camera / gallery (same idea as Amueblar) -->
+    <div class="photo-slot" id="photo-slot" role="button" tabindex="0" aria-label="Hacer foto del desperfecto">
+      <div class="photo-slot-label" id="photo-slot-label">
+        <strong>Hacer foto</strong>
+        <small>Abre la cámara del teléfono</small>
+      </div>
+      <img id="photo-preview" alt="Vista previa del desperfecto" hidden />
+      <div class="photo-slot-actions">
+        <button type="button" class="btn btn-primary" id="btn-retake">Cambiar</button>
+        <button type="button" class="btn btn-ghost" id="btn-clear-photo">Quitar</button>
+      </div>
+    </div>
+    <div class="capture-alt">
+      <button type="button" id="btn-gallery">Elegir de la galería</button>
     </div>
 
-    <div class="capture-row">
-      <button type="button" class="btn btn-primary" id="btn-camera">Abrir cámara</button>
-      <button type="button" class="btn btn-ghost" id="btn-gallery">Galería</button>
-    </div>
-    <div class="capture-row" id="live-controls" hidden>
-      <button type="button" class="btn btn-primary" id="btn-shutter">Capturar</button>
-      <button type="button" class="btn btn-ghost" id="btn-stop-cam">Cerrar cámara</button>
-    </div>
+    <input type="file" id="input-camera" class="sr-only" accept="image/*" capture="environment" />
+    <input type="file" id="input-gallery" class="sr-only" accept="image/*" />
 
-    <input type="file" id="input-camera" class="hidden-file" accept="image/*" capture="environment" />
-    <input type="file" id="input-gallery" class="hidden-file" accept="image/*" />
+    <div class="field-label" id="room-label">Estancia</div>
+    <div class="room-chips" id="room-chips" role="group" aria-labelledby="room-label"></div>
+    <select id="field-room" class="sr-only" tabindex="-1" aria-hidden="true"></select>
 
-    <label class="field"><span>Estancia</span>
-      <select id="field-room"></select>
-    </label>
     <label class="field"><span>Comentario</span>
       <textarea id="field-comment" maxlength="400" placeholder="Ej. Rodapié mal sellado junto a la ventana"></textarea>
+      <div class="field-hint"><span>Opcional pero útil en el PDF</span><span id="comment-count">0/400</span></div>
     </label>
 
-    <div style="display:grid;gap:8px;margin-top:8px">
+    <div class="sheet-actions">
       <button type="button" class="btn btn-primary btn-block" id="btn-save-incident">Guardar incidencia</button>
-      <button type="button" class="btn btn-ghost btn-block" id="btn-cancel-sheet">Cancelar</button>
+      <div class="sheet-actions-row" id="save-more-row">
+        <button type="button" class="btn btn-ghost btn-block" id="btn-save-more">Guardar y seguir</button>
+        <button type="button" class="btn btn-ghost btn-block" id="btn-cancel-sheet">Cancelar</button>
+      </div>
       <button type="button" class="btn btn-danger btn-block" id="btn-delete-incident" hidden>Eliminar</button>
     </div>
   </div>
@@ -686,8 +799,12 @@
   let editingId = null;
   /** @type {Blob|null} */
   let draftPhoto = null;
-  /** @type {MediaStream|null} */
-  let mediaStream = null;
+  /** @type {string|null} */
+  let draftPreviewUrl = null;
+  /** @type {string[]} */
+  let listObjectUrls = [];
+  let filterRoom = "Todas";
+  let selectedRoom = DEFAULT_ROOMS[0];
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -700,17 +817,21 @@
     count: $("count-label"),
     summary: $("project-summary"),
     daysChip: $("days-chip"),
+    filterScroll: $("filter-scroll"),
     sheet: $("sheet"),
     backdrop: $("sheet-backdrop"),
     sheetTitle: $("sheet-title"),
+    photoSlot: $("photo-slot"),
     photoPreview: $("photo-preview"),
-    photoPlaceholder: $("photo-placeholder"),
-    liveVideo: $("live-video"),
-    liveControls: $("live-controls"),
     roomSelect: $("field-room"),
+    roomChips: $("room-chips"),
     comment: $("field-comment"),
+    commentCount: $("comment-count"),
     deleteBtn: $("btn-delete-incident"),
+    saveMore: $("btn-save-more"),
+    saveMoreRow: $("save-more-row"),
     roomsEdit: $("rooms-edit"),
+    exportBtn: $("btn-export"),
     toast: $("toast"),
     busy: $("busy"),
     busyText: $("busy-text"),
@@ -721,27 +842,18 @@
       const raw = localStorage.getItem(META_KEY);
       if (!raw) {
         return {
-          promotora: "",
-          direccion: "",
-          titular: "",
-          referencia: "",
-          entrega: "",
-          rooms: DEFAULT_ROOMS.slice(),
-          seenHome: false,
+          promotora: "", direccion: "", titular: "", referencia: "", entrega: "",
+          rooms: DEFAULT_ROOMS.slice(), seenHome: false, lastRoom: "",
         };
       }
       const data = JSON.parse(raw);
       if (!Array.isArray(data.rooms) || !data.rooms.length) data.rooms = DEFAULT_ROOMS.slice();
+      if (typeof data.lastRoom !== "string") data.lastRoom = "";
       return data;
     } catch {
       return {
-        promotora: "",
-        direccion: "",
-        titular: "",
-        referencia: "",
-        entrega: "",
-        rooms: DEFAULT_ROOMS.slice(),
-        seenHome: false,
+        promotora: "", direccion: "", titular: "", referencia: "", entrega: "",
+        rooms: DEFAULT_ROOMS.slice(), seenHome: false, lastRoom: "",
       };
     }
   }
@@ -798,6 +910,10 @@
     return "inc_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
   }
 
+  function vibrate(ms) {
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch { /* ignore */ }
+  }
+
   function showToast(msg) {
     els.toast.textContent = msg;
     els.toast.classList.add("show");
@@ -840,15 +956,15 @@
     els.daysChip.classList.remove("warn", "alert");
     if (d < 0) {
       els.daysChip.classList.add("alert");
-      els.daysChip.textContent = "Ventana de 15 días vencida";
+      els.daysChip.textContent = "15 días vencidos";
     } else if (d <= 3) {
       els.daysChip.classList.add("alert");
-      els.daysChip.textContent = d === 0 ? "Último día" : `${d} día${d === 1 ? "" : "s"} restante${d === 1 ? "" : "s"}`;
+      els.daysChip.textContent = d === 0 ? "Último día" : `${d} d rest.`;
     } else if (d <= 7) {
       els.daysChip.classList.add("warn");
-      els.daysChip.textContent = `${d} días restantes`;
+      els.daysChip.textContent = `${d} d rest.`;
     } else {
-      els.daysChip.textContent = `${d} días restantes`;
+      els.daysChip.textContent = `${d} d rest.`;
     }
   }
 
@@ -863,33 +979,104 @@
     }
   }
 
-  function blobUrl(blob) {
-    return URL.createObjectURL(blob);
+  function revokeListUrls() {
+    listObjectUrls.forEach((u) => URL.revokeObjectURL(u));
+    listObjectUrls = [];
+  }
+
+  function setDraftPreview(blob) {
+    if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl);
+    draftPreviewUrl = null;
+    draftPhoto = blob;
+    if (!blob) {
+      els.photoPreview.hidden = true;
+      els.photoPreview.removeAttribute("src");
+      els.photoSlot.classList.remove("has-image");
+      return;
+    }
+    draftPreviewUrl = URL.createObjectURL(blob);
+    els.photoPreview.src = draftPreviewUrl;
+    els.photoPreview.hidden = false;
+    els.photoSlot.classList.add("has-image");
+  }
+
+  function updateCommentCount() {
+    els.commentCount.textContent = `${els.comment.value.length}/400`;
+  }
+
+  function updateExportState() {
+    els.exportBtn.disabled = incidents.length === 0;
+  }
+
+  function renderFilters(sorted) {
+    const roomsUsed = [...new Set(sorted.map((i) => i.room))];
+    if (roomsUsed.length < 2) {
+      els.filterScroll.hidden = true;
+      els.filterScroll.innerHTML = "";
+      filterRoom = "Todas";
+      return;
+    }
+    els.filterScroll.hidden = false;
+    const options = ["Todas", ...roomsUsed.sort((a, b) => a.localeCompare(b, "es"))];
+    if (!options.includes(filterRoom)) filterRoom = "Todas";
+    els.filterScroll.innerHTML = "";
+    for (const name of options) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "filter-chip" + (name === filterRoom ? " active" : "");
+      const n = name === "Todas" ? sorted.length : sorted.filter((i) => i.room === name).length;
+      btn.textContent = `${name} (${n})`;
+      btn.addEventListener("click", () => {
+        filterRoom = name;
+        renderList();
+      });
+      els.filterScroll.appendChild(btn);
+    }
   }
 
   function renderList() {
+    revokeListUrls();
     const sorted = incidents.slice().sort((a, b) => b.createdAt - a.createdAt);
     els.count.textContent = String(sorted.length);
-    els.empty.hidden = sorted.length > 0;
-    els.listEl.innerHTML = "";
+    updateExportState();
+    renderFilters(sorted);
 
+    const visible = filterRoom === "Todas"
+      ? sorted
+      : sorted.filter((i) => i.room === filterRoom);
+
+    const emptyAll = sorted.length === 0;
+    const emptyFilter = !emptyAll && visible.length === 0;
+    els.empty.hidden = !emptyAll && !emptyFilter;
+    if (emptyAll) {
+      $("empty-title").textContent = "Todavía no hay nada";
+      $("empty-copy").textContent = "Fotografía el primer desperfecto mientras recorres el piso.";
+      $("btn-empty-new").hidden = false;
+    } else if (emptyFilter) {
+      $("empty-title").textContent = "Nada en esta estancia";
+      $("empty-copy").textContent = "Prueba otro filtro o añade una incidencia.";
+      $("btn-empty-new").hidden = true;
+    }
+
+    els.listEl.innerHTML = "";
     const bits = [];
     if (meta.promotora) bits.push(meta.promotora);
     if (meta.direccion) bits.push(meta.direccion);
     els.summary.textContent = bits.length
       ? bits.join(" · ")
       : "Añade desperfectos mientras recorres el piso.";
-
     updateDaysChip();
 
-    for (const item of sorted) {
+    for (const item of visible) {
       const row = document.createElement("article");
       row.className = "incident";
       const img = document.createElement("img");
       img.className = "incident-thumb";
       img.alt = item.room;
       img.loading = "lazy";
-      img.src = blobUrl(item.photo);
+      const url = URL.createObjectURL(item.photo);
+      listObjectUrls.push(url);
+      img.src = url;
       const body = document.createElement("div");
       body.className = "incident-body";
       body.innerHTML = `
@@ -911,14 +1098,34 @@
     }
   }
 
-  function fillRoomSelect(selected) {
+  function fillRoomSelect() {
     els.roomSelect.innerHTML = "";
     for (const room of meta.rooms) {
       const opt = document.createElement("option");
       opt.value = room;
       opt.textContent = room;
-      if (room === selected) opt.selected = true;
       els.roomSelect.appendChild(opt);
+    }
+  }
+
+  function renderRoomChips(active) {
+    selectedRoom = active && meta.rooms.includes(active)
+      ? active
+      : (meta.lastRoom && meta.rooms.includes(meta.lastRoom) ? meta.lastRoom : meta.rooms[0]);
+    els.roomSelect.value = selectedRoom;
+    els.roomChips.innerHTML = "";
+    for (const room of meta.rooms) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "room-chip" + (room === selectedRoom ? " active" : "");
+      btn.textContent = room;
+      btn.setAttribute("aria-pressed", room === selectedRoom ? "true" : "false");
+      btn.addEventListener("click", () => {
+        selectedRoom = room;
+        els.roomSelect.value = room;
+        renderRoomChips(room);
+      });
+      els.roomChips.appendChild(btn);
     }
   }
 
@@ -954,33 +1161,33 @@
     renderRoomsEdit();
   }
 
-  async function stopCamera() {
-    if (mediaStream) {
-      mediaStream.getTracks().forEach((t) => t.stop());
-      mediaStream = null;
+  async function compressImage(fileOrBlob, maxEdge, quality) {
+    let bitmap = null;
+    try {
+      if (typeof createImageBitmap === "function") {
+        bitmap = await createImageBitmap(fileOrBlob);
+      }
+    } catch { /* fall through */ }
+
+    if (bitmap) {
+      let width = bitmap.width;
+      let height = bitmap.height;
+      const scale = Math.min(1, maxEdge / Math.max(width, height));
+      width = Math.max(1, Math.round(width * scale));
+      height = Math.max(1, Math.round(height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      bitmap.close();
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
+      if (!blob) throw new Error("No se pudo comprimir la imagen");
+      return blob;
     }
-    els.liveVideo.hidden = true;
-    els.liveVideo.srcObject = null;
-    els.liveControls.hidden = true;
-  }
 
-  function showDraftPhoto(blob) {
-    draftPhoto = blob;
-    const url = blobUrl(blob);
-    els.photoPreview.src = url;
-    els.photoPreview.hidden = false;
-    els.photoPlaceholder.hidden = true;
-    els.liveVideo.hidden = true;
-  }
-
-  function clearDraftPhoto() {
-    draftPhoto = null;
-    els.photoPreview.hidden = true;
-    els.photoPreview.removeAttribute("src");
-    els.photoPlaceholder.hidden = false;
-  }
-
-  function compressImage(fileOrBlob, maxEdge, quality) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(fileOrBlob);
       const img = new Image();
@@ -988,8 +1195,8 @@
         try {
           let { width, height } = img;
           const scale = Math.min(1, maxEdge / Math.max(width, height));
-          width = Math.round(width * scale);
-          height = Math.round(height * scale);
+          width = Math.max(1, Math.round(width * scale));
+          height = Math.max(1, Math.round(height * scale));
           const canvas = document.createElement("canvas");
           canvas.width = width;
           canvas.height = height;
@@ -997,15 +1204,11 @@
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              URL.revokeObjectURL(url);
-              if (!blob) reject(new Error("No se pudo comprimir la imagen"));
-              else resolve(blob);
-            },
-            "image/jpeg",
-            quality
-          );
+          canvas.toBlob((blob) => {
+            URL.revokeObjectURL(url);
+            if (!blob) reject(new Error("No se pudo comprimir la imagen"));
+            else resolve(blob);
+          }, "image/jpeg", quality);
         } catch (err) {
           URL.revokeObjectURL(url);
           reject(err);
@@ -1020,19 +1223,19 @@
   }
 
   async function handleFile(file) {
-    if (!file || !file.type.startsWith("image/")) {
+    if (!file || !String(file.type || "").startsWith("image/")) {
       showToast("Selecciona una imagen válida");
       return;
     }
-    if (file.size > 25 * 1024 * 1024) {
-      showToast("La imagen es demasiado grande (máx. 25 MB)");
+    if (file.size > 30 * 1024 * 1024) {
+      showToast("La imagen es demasiado grande (máx. 30 MB)");
       return;
     }
     try {
       setBusy(true, "Optimizando foto…");
-      await stopCamera();
       const blob = await compressImage(file, MAX_EDGE, JPEG_QUALITY);
-      showDraftPhoto(blob);
+      setDraftPreview(blob);
+      vibrate(10);
     } catch {
       showToast("No se pudo procesar la foto");
     } finally {
@@ -1040,99 +1243,69 @@
     }
   }
 
-  async function startGetUserMedia() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      $("input-camera").click();
-      return;
-    }
-    try {
-      await stopCamera();
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      els.liveVideo.srcObject = mediaStream;
-      els.liveVideo.hidden = false;
-      els.photoPreview.hidden = true;
-      els.photoPlaceholder.hidden = true;
-      els.liveControls.hidden = false;
-      await els.liveVideo.play();
-    } catch (err) {
-      const name = err && err.name;
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        showToast("Sin permiso de cámara. Usa la galería o concede acceso.");
-      } else if (name === "NotFoundError") {
-        showToast("No hay cámara disponible. Elige una foto de la galería.");
-      } else {
-        showToast("Cámara no disponible. Probando selector del sistema…");
-        $("input-camera").click();
-      }
-    }
+  function openNativeCamera() {
+    $("input-camera").click();
   }
 
-  async function captureFromStream() {
-    if (!mediaStream) return;
-    const video = els.liveVideo;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-    const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", JPEG_QUALITY));
-    if (!blob) {
-      showToast("No se pudo capturar el fotograma");
-      return;
-    }
-    try {
-      const compressed = await compressImage(blob, MAX_EDGE, JPEG_QUALITY);
-      await stopCamera();
-      showDraftPhoto(compressed);
-    } catch {
-      showToast("Error al capturar");
-    }
+  function openGallery() {
+    $("input-gallery").click();
   }
 
-  async function openSheet(id) {
+  function openSheet(id) {
     editingId = id || null;
-    await stopCamera();
-    clearDraftPhoto();
+    setDraftPreview(null);
     els.comment.value = "";
+    updateCommentCount();
     els.deleteBtn.hidden = !editingId;
+    els.saveMore.hidden = !!editingId;
     els.sheetTitle.textContent = editingId ? "Editar incidencia" : "Nueva incidencia";
+    fillRoomSelect();
 
     if (editingId) {
       const item = incidents.find((x) => x.id === editingId);
       if (!item) return;
-      fillRoomSelect(item.room);
+      renderRoomChips(item.room);
       els.comment.value = item.comment || "";
-      showDraftPhoto(item.photo);
+      updateCommentCount();
+      setDraftPreview(item.photo);
     } else {
-      fillRoomSelect(meta.rooms[0]);
+      renderRoomChips(meta.lastRoom || meta.rooms[0]);
     }
 
+    document.body.classList.add("sheet-open");
     els.backdrop.classList.add("open");
     els.sheet.classList.add("open");
+    els.sheet.scrollTop = 0;
+    setTimeout(() => {
+      try { els.photoSlot.focus({ preventScroll: true }); } catch { /* ignore */ }
+    }, 50);
   }
 
-  async function closeSheet() {
-    await stopCamera();
+  function closeSheet() {
+    document.body.classList.remove("sheet-open");
     els.backdrop.classList.remove("open");
     els.sheet.classList.remove("open");
     editingId = null;
-    clearDraftPhoto();
+    setDraftPreview(null);
+    $("input-camera").value = "";
+    $("input-gallery").value = "";
   }
 
-  async function saveIncident() {
+  async function saveIncident(andContinue) {
     if (!draftPhoto) {
-      showToast("Añade una foto del desperfecto");
+      showToast("Haz una foto del desperfecto");
+      els.photoSlot.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    const room = els.roomSelect.value;
+    const room = selectedRoom || els.roomSelect.value;
     if (!room) {
       showToast("Elige una estancia");
       return;
     }
     const comment = els.comment.value.trim();
     const now = Date.now();
+    meta.lastRoom = room;
+    saveMeta(meta);
 
     if (editingId) {
       const item = incidents.find((x) => x.id === editingId);
@@ -1143,22 +1316,47 @@
       item.updatedAt = now;
       await putIncident(item);
       showToast("Incidencia actualizada");
-    } else {
-      const item = {
-        id: uid(),
-        room,
-        comment,
-        photo: draftPhoto,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await putIncident(item);
-      incidents.push(item);
-      showToast("Incidencia guardada");
+      vibrate(15);
+      incidents = await getAllIncidents();
+      renderList();
+      closeSheet();
+      return;
     }
+
+    const item = {
+      id: uid(),
+      room,
+      comment,
+      photo: draftPhoto,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await putIncident(item);
+    incidents.push(item);
+    vibrate(15);
     incidents = await getAllIncidents();
     renderList();
-    await closeSheet();
+
+    if (andContinue) {
+      showToast("Guardada. Siguiente desperfecto");
+      setDraftPreview(null);
+      els.comment.value = "";
+      updateCommentCount();
+      renderRoomChips(room);
+      editingId = null;
+      els.sheetTitle.textContent = "Nueva incidencia";
+      els.deleteBtn.hidden = true;
+      els.saveMore.hidden = false;
+      els.sheet.scrollTop = 0;
+      $("input-camera").value = "";
+      $("input-gallery").value = "";
+      // Abrir cámara nativa de nuevo para el flujo de recorrido
+      setTimeout(() => openNativeCamera(), 280);
+      return;
+    }
+
+    showToast("Incidencia guardada");
+    closeSheet();
   }
 
   async function confirmDelete(id) {
@@ -1167,7 +1365,7 @@
     incidents = incidents.filter((x) => x.id !== id);
     renderList();
     showToast("Incidencia eliminada");
-    if (editingId === id) await closeSheet();
+    if (editingId === id) closeSheet();
   }
 
   function blobToDataUrl(blob) {
@@ -1212,7 +1410,6 @@
       const dateStr = today.toISOString().slice(0, 10);
       const sorted = incidents.slice().sort((a, b) => a.createdAt - b.createdAt);
 
-      // Cover
       doc.setFillColor(26, 60, 58);
       doc.rect(0, 0, pageW, 48, "F");
       doc.setTextColor(247, 250, 249);
@@ -1267,7 +1464,6 @@
       doc.setLineWidth(0.6);
       doc.line(margin, y, pageW - margin, y);
 
-      // Entries
       for (let i = 0; i < sorted.length; i++) {
         const item = sorted[i];
         setBusy(true, `PDF: incidencia ${i + 1} de ${sorted.length}…`);
@@ -1326,7 +1522,6 @@
         y += 10;
       }
 
-      // Footer page numbers
       const pages = doc.getNumberOfPages();
       for (let p = 1; p <= pages; p++) {
         doc.setPage(p);
@@ -1337,8 +1532,6 @@
 
       const filename = `incidencias-postventa-${dateStr}.pdf`;
       const pdfBlob = doc.output("blob");
-
-      // Prefer share on mobile when available
       const file = new File([pdfBlob], filename, { type: "application/pdf" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
@@ -1388,17 +1581,16 @@
     fillConfigForm();
     showScreen("config");
   });
-  $("btn-config-back").addEventListener("click", () => showScreen(meta.seenHome ? "list" : "home"));
+  $("btn-config-back").addEventListener("click", () => showScreen(meta.seenHome || incidents.length ? "list" : "home"));
   $("btn-save-config").addEventListener("click", () => {
     meta.promotora = $("cfg-promotora").value.trim();
     meta.direccion = $("cfg-direccion").value.trim();
     meta.titular = $("cfg-titular").value.trim();
     meta.referencia = $("cfg-ref").value.trim();
     meta.entrega = $("cfg-entrega").value;
-    saveMeta(meta);
-    showToast("Datos guardados");
     meta.seenHome = true;
     saveMeta(meta);
+    showToast("Datos guardados");
     showScreen("list");
     renderList();
   });
@@ -1413,28 +1605,50 @@
     saveMeta(meta);
     $("new-room").value = "";
     renderRoomsEdit();
-    fillRoomSelect(name);
+    fillRoomSelect();
     showToast("Estancia añadida");
   });
+  $("new-room").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      $("btn-add-room").click();
+    }
+  });
+
   $("btn-new").addEventListener("click", () => openSheet());
+  $("btn-empty-new").addEventListener("click", () => openSheet());
   $("btn-export").addEventListener("click", () => exportPdf());
   $("btn-cancel-sheet").addEventListener("click", () => closeSheet());
   $("sheet-backdrop").addEventListener("click", () => closeSheet());
-  $("btn-save-incident").addEventListener("click", () => saveIncident());
+  $("btn-save-incident").addEventListener("click", () => saveIncident(false));
+  $("btn-save-more").addEventListener("click", () => saveIncident(true));
   $("btn-delete-incident").addEventListener("click", () => {
     if (editingId) confirmDelete(editingId);
   });
-  $("btn-camera").addEventListener("click", () => startGetUserMedia());
-  $("btn-gallery").addEventListener("click", () => $("input-gallery").click());
-  $("btn-shutter").addEventListener("click", () => captureFromStream());
-  $("btn-stop-cam").addEventListener("click", async () => {
-    await stopCamera();
-    if (!draftPhoto) els.photoPlaceholder.hidden = false;
-    else {
-      els.photoPreview.hidden = false;
-      els.photoPlaceholder.hidden = true;
+
+  // Photo: tap slot / Enter → native camera
+  els.photoSlot.addEventListener("click", (e) => {
+    if (e.target.closest(".photo-slot-actions")) return;
+    openNativeCamera();
+  });
+  els.photoSlot.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openNativeCamera();
     }
   });
+  $("btn-retake").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openNativeCamera();
+  });
+  $("btn-clear-photo").addEventListener("click", (e) => {
+    e.stopPropagation();
+    setDraftPreview(null);
+    $("input-camera").value = "";
+    $("input-gallery").value = "";
+  });
+  $("btn-gallery").addEventListener("click", () => openGallery());
+
   $("input-camera").addEventListener("change", (e) => {
     const f = e.target.files && e.target.files[0];
     e.target.value = "";
@@ -1446,8 +1660,17 @@
     if (f) handleFile(f);
   });
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) stopCamera();
+  els.comment.addEventListener("input", updateCommentCount);
+  els.comment.addEventListener("focus", () => {
+    setTimeout(() => {
+      els.comment.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && els.sheet.classList.contains("open")) {
+      closeSheet();
+    }
   });
 
   async function init() {
