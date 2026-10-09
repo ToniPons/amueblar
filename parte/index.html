@@ -807,7 +807,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="section-head" style="margin-top:0">
       <h2 id="sheet-title" style="font-size:1.3rem">Nueva incidencia</h2>
-      <p>Foto, estancia, estado y notas de la promotora cuando respondan.</p>
+      <p>Foto, estancia, estado y notas de seguimiento cuando haya respuesta.</p>
     </div>
 
     <!-- Native camera / gallery (same idea as Amueblar) -->
@@ -841,9 +841,9 @@
     <div class="field-label" id="status-label">Estado</div>
     <div class="status-chips" id="status-chips" role="group" aria-labelledby="status-label"></div>
 
-    <label class="field"><span>Respuesta / notas de la promotora</span>
-      <textarea id="field-promotora" maxlength="600" placeholder="Ej. Aceptan reparar la semana del 14. Contacto: postventa@…"></textarea>
-      <div class="field-hint"><span>Para ir apuntando lo que te digan</span><span id="promotora-count">0/600</span></div>
+    <label class="field"><span>Respuesta / notas</span>
+      <textarea id="field-promotora" maxlength="600" placeholder="Ej. Quedan en reparar la semana del 14. O nota interna…"></textarea>
+      <div class="field-hint"><span>Promotora, obrero, nota interna…</span><span id="promotora-count">0/600</span></div>
     </label>
 
     <div class="sheet-actions">
@@ -1292,7 +1292,7 @@
         if (item.notaPromotora) {
           promo.hidden = false;
           const lab = document.createElement("strong");
-          lab.textContent = "Promotora";
+          lab.textContent = "Nota";
           promo.appendChild(lab);
           promo.appendChild(document.createTextNode(item.notaPromotora));
         }
@@ -1806,7 +1806,7 @@
           const statusLine = `Estado: ${item.status || "Pendiente"}`;
           const promoText = (item.notaPromotora || "").trim();
           const promoLines = promoText
-            ? doc.splitTextToSize(`Promotora: ${promoText}`, contentW)
+            ? doc.splitTextToSize(`Nota: ${promoText}`, contentW)
             : [];
           const metaBlockH = 5 + (promoLines.length ? promoLines.length * 4.2 + 2 : 0);
           const blockH = titleH + 4 + metaBlockH + (imgData ? drawH + 5 : 0) + 8;
@@ -1829,7 +1829,7 @@
           doc.setFont("helvetica", "normal");
           doc.setFontSize(8.5);
           doc.setTextColor(106, 124, 126);
-          doc.text(`${formatDate(item.createdAt)}  ·  ${statusLine}`, margin, y);
+          doc.text(statusLine, margin, y);
           y += 5;
 
           if (imgData) {
