@@ -78,42 +78,39 @@
       z-index: 1;
       width: min(48rem, 100%);
       margin: 0 auto;
-      padding: calc(1.25rem + var(--safe-t)) 1.25rem calc(2rem + var(--safe-b));
+      padding: calc(0.85rem + var(--safe-t)) 1rem calc(5.5rem + var(--safe-b));
       display: flex;
       flex-direction: column;
-      gap: 2rem;
+      gap: 1.1rem;
       min-height: 100dvh;
     }
 
-    .hero-mark {
+    .topbar {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .brand-mini {
       margin: 0;
       font-family: var(--font-display);
-      font-size: clamp(2.75rem, 8vw, 4.5rem);
-      line-height: 0.92;
+      font-size: 1.35rem;
       letter-spacing: -0.02em;
       color: var(--ink);
     }
-    .eyebrow {
-      margin: 0 0 0.75rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: color-mix(in oklab, var(--pine) 65%, transparent);
-    }
-    .lede {
-      margin: 1rem 0 0;
-      max-width: 34ch;
-      font-size: 1.05rem;
-      line-height: 1.45;
-      color: color-mix(in oklab, var(--ink) 60%, transparent);
+    .week-chip {
+      margin: 0;
+      font-size: 0.82rem;
+      font-weight: 650;
+      color: color-mix(in oklab, var(--pine) 75%, transparent);
+      white-space: nowrap;
     }
 
-    .progress-block { margin-top: 1.5rem; animation: rise 0.55s ease both; }
+    .progress-block { animation: rise 0.45s ease both; }
     .progress-block .status {
       margin: 0;
       font-family: var(--font-display);
-      font-size: clamp(1.6rem, 5vw, 2.2rem);
+      font-size: clamp(1.45rem, 5vw, 1.9rem);
       font-weight: 700;
       letter-spacing: -0.02em;
       color: var(--pine);
@@ -159,22 +156,11 @@
       font-size: 1.65rem;
       letter-spacing: -0.02em;
     }
-    .panel .hint {
-      margin: 0.25rem 0 0;
-      font-size: 0.9rem;
-      color: color-mix(in oklab, var(--ink) 55%, transparent);
-    }
-
     .field { display: grid; gap: 0.4rem; margin-bottom: 0.9rem; }
     .field label {
       font-size: 0.875rem;
       font-weight: 600;
       color: color-mix(in oklab, var(--ink) 70%, transparent);
-    }
-    .field .help {
-      margin: 0;
-      font-size: 0.85rem;
-      color: color-mix(in oklab, var(--ink) 50%, transparent);
     }
     .money-wrap { position: relative; }
     .money-wrap .euro {
@@ -428,29 +414,44 @@
       color: color-mix(in oklab, var(--ink) 55%, transparent);
     }
 
-    .section-head { margin-bottom: 1rem; }
-    .section-head h2 {
-      margin: 0;
+    .section-title {
+      margin: 0 0 0.75rem;
       font-family: var(--font-display);
-      font-size: 1.85rem;
+      font-size: 1.35rem;
       letter-spacing: -0.02em;
-    }
-    .section-head p {
-      margin: 0.25rem 0 0;
-      color: color-mix(in oklab, var(--ink) 55%, transparent);
     }
 
     footer.app-foot {
       margin-top: auto;
-      padding-top: 1.5rem;
-      border-top: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
+      padding-top: 0.75rem;
       display: flex;
       flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 0.75rem;
-      font-size: 0.9rem;
-      color: color-mix(in oklab, var(--ink) 45%, transparent);
+      justify-content: flex-end;
+      gap: 1rem;
     }
+
+    .fab {
+      position: fixed;
+      right: max(1rem, env(safe-area-inset-right, 0px));
+      bottom: calc(1rem + var(--safe-b));
+      z-index: 30;
+      width: 3.6rem;
+      height: 3.6rem;
+      border-radius: 999px;
+      background: var(--pine);
+      color: var(--foam);
+      box-shadow: 0 12px 28px rgba(10, 58, 54, 0.28);
+      display: grid;
+      place-items: center;
+      font-size: 2rem;
+      font-weight: 500;
+      line-height: 1;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fab:active { transform: scale(0.96); }
+    .fab[hidden] { display: none; }
+    .fab svg { width: 1.55rem; height: 1.55rem; display: block; }
 
     .toast {
       position: fixed;
@@ -540,9 +541,10 @@
     </nav>
 
     <header>
-      <p class="eyebrow" id="week-label">Semana actual</p>
-      <h1 class="hero-mark">Tracker Gastos</h1>
-      <p class="lede">Controla tu presupuesto semanal sin fricción: anota en segundos y mira cuándo se te fue el dinero.</p>
+      <div class="topbar">
+        <h1 class="brand-mini">Gastos</h1>
+        <p class="week-chip" id="week-label">Semana actual</p>
+      </div>
       <div class="progress-block" id="progress-block" hidden>
         <p class="status" id="progress-status"></p>
         <p class="meta" id="progress-meta"></p>
@@ -552,68 +554,27 @@
     </header>
 
     <section class="panel" aria-label="Presupuesto semanal" id="budget-section">
-      <div class="section-head" style="margin-bottom: 1rem">
-        <h2 id="budget-heading">Presupuesto</h2>
-        <p id="budget-sub">¿Cuánto quieres gastar esta semana?</p>
-      </div>
+      <h2 class="section-title" id="budget-heading">Tope semanal</h2>
       <form id="budget-form">
         <div class="field">
-          <label for="budget-input">Tope semanal</label>
+          <label class="sr-only" for="budget-input">Tope semanal</label>
           <div class="money-wrap">
             <span class="euro" aria-hidden="true">€</span>
             <input id="budget-input" inputmode="decimal" placeholder="200" autocomplete="off" required />
           </div>
-          <p class="help">Puedes cambiarlo cuando quieras. Los datos se guardan solo en este dispositivo.</p>
         </div>
         <p class="alert" id="budget-error" hidden></p>
         <div class="btn-row">
-          <button type="submit" class="btn btn-kelp" id="budget-submit">Fijar presupuesto</button>
+          <button type="submit" class="btn btn-kelp" id="budget-submit">Fijar</button>
         </div>
       </form>
-    </section>
-
-    <section class="panel" aria-label="Registrar gasto" id="add-section">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:0.75rem;margin-bottom:1rem">
-        <div>
-          <h2>Gasto rápido</h2>
-          <p class="hint">Importe + categoría. Opcional: nota y fecha.</p>
-        </div>
-      </div>
-      <form id="expense-form">
-        <div class="field">
-          <label for="expense-amount">Importe</label>
-          <div class="money-wrap lg">
-            <span class="euro lg" aria-hidden="true">€</span>
-            <input id="expense-amount" inputmode="decimal" placeholder="0,00" autocomplete="off" />
-          </div>
-        </div>
-        <div class="field">
-          <label id="cat-label">Categoría</label>
-          <div class="chips" id="cat-chips" role="group" aria-labelledby="cat-label"></div>
-        </div>
-        <div class="field">
-          <label for="expense-note">Nota <span style="font-weight:500;opacity:.7">(opcional)</span></label>
-          <input id="expense-note" type="text" maxlength="120" placeholder="Café, metro, super…" autocomplete="off" />
-        </div>
-        <div class="field">
-          <label for="expense-date">Fecha</label>
-          <input id="expense-date" type="date" />
-          <p class="help">Solo días de esta semana (lunes–domingo).</p>
-        </div>
-        <p class="alert" id="expense-error" hidden></p>
-        <button type="submit" class="btn btn-primary" id="expense-submit" style="width:100%">Añadir gasto</button>
-      </form>
-      <p class="banner warn" id="need-budget" hidden>Fija el presupuesto para poder registrar gastos.</p>
     </section>
 
     <section aria-label="Informe semanal">
-      <div class="section-head">
-        <h2>Informe de la semana</h2>
-        <p>¿Te pasaste? ¿Desde qué día? Y el reparto por tipo.</p>
-      </div>
-      <div id="report-empty" class="empty" hidden>Fija un presupuesto para ver si te pasas y cuándo se agota.</div>
+      <h2 class="section-title">Informe</h2>
+      <div id="report-empty" class="empty" hidden>Fija un tope para ver el informe.</div>
       <div id="report-body" hidden>
-        <div class="report-grid" style="margin-bottom:1.25rem">
+        <div class="report-grid" style="margin-bottom:1rem">
           <div class="stat-card">
             <p class="label">Estado</p>
             <p class="value" id="stat-status"></p>
@@ -622,34 +583,68 @@
           <div class="stat-card">
             <p class="label">Se agotó</p>
             <p class="value" id="stat-ranout"></p>
-            <p class="sub" id="stat-ranout-sub"></p>
           </div>
         </div>
 
         <div class="panel" style="margin-bottom:1rem" id="cat-panel" hidden>
-          <h2 style="font-size:1.25rem;margin-bottom:0.75rem">Por categoría</h2>
+          <h3 class="section-title" style="font-size:1.15rem">Por categoría</h3>
           <ul class="cat-list" id="cat-list"></ul>
         </div>
 
         <div class="panel" style="margin-bottom:1rem" id="day-panel" hidden>
-          <h2 style="font-size:1.25rem;margin-bottom:0.75rem">Por día</h2>
+          <h3 class="section-title" style="font-size:1.15rem">Por día</h3>
           <ul class="day-list" id="day-list"></ul>
         </div>
 
         <div class="panel" id="list-panel" hidden>
-          <h2 style="font-size:1.25rem;margin-bottom:0.5rem">Gastos</h2>
+          <h3 class="section-title" style="font-size:1.15rem">Gastos</h3>
           <ul class="expense-list" id="expense-list"></ul>
         </div>
       </div>
     </section>
 
     <footer class="app-foot">
-      <p>Datos locales en este navegador. Sin cuenta ni servidor.</p>
+      <button type="button" class="btn-ghost" id="btn-edit-budget" hidden>Cambiar tope</button>
       <button type="button" class="btn-ghost" id="btn-reset">Reiniciar semana</button>
     </footer>
   </div>
 
+  <button type="button" class="fab" id="fab-add" aria-label="Añadir gasto" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  </button>
+
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+
+  <div class="sheet" id="add-sheet" role="dialog" aria-modal="true" aria-labelledby="add-title" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h2 id="add-title">Nuevo gasto</h2>
+    <form id="expense-form">
+      <div class="field">
+        <label for="expense-amount">Importe</label>
+        <div class="money-wrap lg">
+          <span class="euro lg" aria-hidden="true">€</span>
+          <input id="expense-amount" inputmode="decimal" placeholder="0,00" autocomplete="off" />
+        </div>
+      </div>
+      <div class="field">
+        <label id="cat-label">Categoría</label>
+        <div class="chips" id="cat-chips" role="group" aria-labelledby="cat-label"></div>
+      </div>
+      <div class="field">
+        <label for="expense-note">Nota</label>
+        <input id="expense-note" type="text" maxlength="120" placeholder="Café, metro…" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="expense-date">Fecha</label>
+        <input id="expense-date" type="date" />
+      </div>
+      <p class="alert" id="expense-error" hidden></p>
+      <button type="submit" class="btn btn-primary" id="expense-submit" style="width:100%">Añadir</button>
+    </form>
+  </div>
+
   <div class="sheet" id="edit-sheet" role="dialog" aria-modal="true" aria-labelledby="edit-title" hidden>
     <div class="sheet-handle" aria-hidden="true"></div>
     <h2 id="edit-title">Editar gasto</h2>
@@ -892,22 +887,27 @@
   const progressBar = $("#progress-bar");
   const progressFill = $("#progress-fill");
   const weekRollover = $("#week-rollover");
+  const budgetSection = $("#budget-section");
   const budgetInput = $("#budget-input");
   const budgetError = $("#budget-error");
   const budgetSubmit = $("#budget-submit");
   const budgetHeading = $("#budget-heading");
-  const budgetSub = $("#budget-sub");
+  const btnEditBudget = $("#btn-edit-budget");
   const expenseForm = $("#expense-form");
   const expenseAmount = $("#expense-amount");
   const expenseNote = $("#expense-note");
   const expenseDate = $("#expense-date");
   const expenseError = $("#expense-error");
   const expenseSubmit = $("#expense-submit");
-  const needBudget = $("#need-budget");
+  const fabAdd = $("#fab-add");
+  const addSheet = $("#add-sheet");
+  const editSheet = $("#edit-sheet");
+  const sheetBackdrop = $("#sheet-backdrop");
   const catChips = $("#cat-chips");
   const reportEmpty = $("#report-empty");
   const reportBody = $("#report-body");
   const toastEl = $("#toast");
+  let budgetCollapsed = false;
 
   function toast(msg) {
     toastEl.textContent = msg;
@@ -941,23 +941,61 @@
     ).join("");
   }
 
+  function openSheet(sheet) {
+    sheetBackdrop.hidden = false;
+    sheet.hidden = false;
+    requestAnimationFrame(() => {
+      sheetBackdrop.classList.add("open");
+      sheet.classList.add("open");
+      document.body.classList.add("sheet-open");
+    });
+  }
+
+  function closeSheets() {
+    [addSheet, editSheet].forEach((sheet) => sheet.classList.remove("open"));
+    sheetBackdrop.classList.remove("open");
+    document.body.classList.remove("sheet-open");
+    setTimeout(() => {
+      addSheet.hidden = true;
+      editSheet.hidden = true;
+      sheetBackdrop.hidden = true;
+    }, 280);
+  }
+
+  function openAddSheet() {
+    if (state.budget == null || state.budget <= 0) {
+      toast("Fija un tope primero");
+      budgetSection.scrollIntoView({ behavior: "smooth", block: "center" });
+      budgetInput.focus();
+      return;
+    }
+    expenseError.hidden = true;
+    syncDateInputs();
+    renderChips();
+    openSheet(addSheet);
+    setTimeout(() => expenseAmount.focus(), 280);
+  }
+
   function render() {
     const report = buildReport(state);
     const hasBudget = report.budget != null && report.budget > 0;
-    weekLabelEl.textContent = `Semana ${weekLabel()}`;
+    weekLabelEl.textContent = weekLabel();
 
-    // Budget form
     if (hasBudget) {
       budgetInput.value = String(report.budget).replace(".", ",");
-      budgetSubmit.textContent = "Actualizar tope";
+      budgetSubmit.textContent = "Guardar";
       budgetHeading.textContent = "Tope semanal";
-      budgetSub.textContent = "Cámbialo si esta semana se tuerce el plan.";
+      budgetSection.hidden = budgetCollapsed;
+      btnEditBudget.hidden = !budgetCollapsed;
     } else {
-      if (!budgetInput.value) budgetInput.placeholder = "200";
-      budgetSubmit.textContent = "Fijar presupuesto";
-      budgetHeading.textContent = "Presupuesto";
-      budgetSub.textContent = "¿Cuánto quieres gastar esta semana?";
+      budgetCollapsed = false;
+      budgetSection.hidden = false;
+      btnEditBudget.hidden = true;
+      budgetSubmit.textContent = "Fijar";
+      budgetHeading.textContent = "Tope semanal";
     }
+
+    fabAdd.hidden = false;
 
     // Progress
     if (hasBudget) {
@@ -975,9 +1013,6 @@
       progressBlock.hidden = true;
     }
 
-    // Expense form gate
-    expenseForm.hidden = !hasBudget;
-    needBudget.hidden = hasBudget;
     expenseSubmit.disabled = !hasBudget;
 
     // Report
@@ -1102,10 +1137,19 @@
     const wasSet = state.budget != null;
     state = { ...state, budget: amount };
     save(state);
+    budgetCollapsed = true;
     render();
-    toast(wasSet ? "Tope actualizado" : "Presupuesto fijado");
-    expenseAmount.focus();
+    toast(wasSet ? "Tope actualizado" : "Tope fijado");
   });
+
+  btnEditBudget.addEventListener("click", () => {
+    budgetCollapsed = false;
+    render();
+    budgetSection.scrollIntoView({ behavior: "smooth", block: "center" });
+    budgetInput.focus();
+  });
+
+  fabAdd.addEventListener("click", openAddSheet);
 
   expenseForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -1146,9 +1190,9 @@
     expenseAmount.value = "";
     expenseNote.value = "";
     expenseDate.value = dateKey(new Date());
+    closeSheets();
     render();
     toast("Gasto añadido");
-    expenseAmount.focus();
   });
 
   $("#expense-list").addEventListener("click", (e) => {
@@ -1180,33 +1224,15 @@
     ).join("");
     $("#edit-error").hidden = true;
     syncDateInputs();
-    const sheet = $("#edit-sheet");
-    const backdrop = $("#sheet-backdrop");
-    sheet.hidden = false;
-    backdrop.hidden = false;
-    requestAnimationFrame(() => {
-      sheet.classList.add("open");
-      backdrop.classList.add("open");
-      document.body.classList.add("sheet-open");
-    });
+    addSheet.hidden = true;
+    addSheet.classList.remove("open");
+    openSheet(editSheet);
   }
 
-  function closeEdit() {
-    const sheet = $("#edit-sheet");
-    const backdrop = $("#sheet-backdrop");
-    sheet.classList.remove("open");
-    backdrop.classList.remove("open");
-    document.body.classList.remove("sheet-open");
-    setTimeout(() => {
-      sheet.hidden = true;
-      backdrop.hidden = true;
-    }, 280);
-  }
-
-  $("#sheet-backdrop").addEventListener("click", closeEdit);
-  $("#edit-cancel").addEventListener("click", closeEdit);
+  sheetBackdrop.addEventListener("click", closeSheets);
+  $("#edit-cancel").addEventListener("click", closeSheets);
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !$("#edit-sheet").hidden) closeEdit();
+    if (e.key === "Escape" && (!addSheet.hidden || !editSheet.hidden)) closeSheets();
   });
 
   $("#edit-form").addEventListener("submit", (e) => {
@@ -1242,7 +1268,7 @@
       ),
     };
     save(state);
-    closeEdit();
+    closeSheets();
     render();
     toast("Gasto actualizado");
   });
@@ -1260,6 +1286,7 @@
     } catch { /* ignore */ }
     state = emptyState();
     save(state);
+    budgetCollapsed = false;
     budgetInput.value = "";
     expenseAmount.value = "";
     expenseNote.value = "";
@@ -1271,10 +1298,11 @@
 
   if (loaded.rolled) {
     weekRollover.hidden = false;
-    weekRollover.textContent = "Nueva semana: la anterior se archivó en este dispositivo. Empieza fijando el tope.";
+    weekRollover.textContent = "Nueva semana — fija el tope.";
     weekRollover.classList.add("warn");
   }
 
+  if (state.budget != null && state.budget > 0) budgetCollapsed = true;
   render();
 })();
   </script>
