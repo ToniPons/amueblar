@@ -241,6 +241,10 @@ body::before {
   border-radius: 12px;
 }
 
+.filters-panel[hidden] {
+  display: none !important;
+}
+
 .filter-row {
   display: grid;
   grid-template-columns: 4.2rem 1fr;
