@@ -7,12 +7,12 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#1f4a40" />
-    <meta name="description" content="Apps — Amueblar, Parte y Gastos en un solo sitio." />
+    <meta name="description" content="Apps — Amueblar, Parte y Gastos." />
     <title>Apps</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/landing.css" />
@@ -20,21 +20,19 @@
   <body>
     <div class="atmosphere" aria-hidden="true"></div>
     <main class="hub">
-      <p class="brand">Apps</p>
-      <h1 class="headline">Tres herramientas, un sitio.</h1>
-      <p class="lede">Elige a dónde ir: mudanza, postventa o presupuesto semanal.</p>
-      <nav class="destinations" aria-label="Aplicaciones">
-        <a class="destination" href="./amueblar/">
-          <span class="destination__name">Amueblar</span>
-          <span class="destination__hint">Muebles y presupuesto</span>
+      <h1 class="brand">Apps</h1>
+      <nav class="app-grid" aria-label="Aplicaciones">
+        <a class="app-tile" href="./amueblar/" style="--i: 0">
+          <img class="app-tile__icon" src="./icons/amueblar.svg" alt="" width="96" height="96" decoding="async" />
+          <span class="app-tile__name">Amueblar</span>
         </a>
-        <a class="destination" href="./parte/">
-          <span class="destination__name">Parte</span>
-          <span class="destination__hint">Incidencias postventa</span>
+        <a class="app-tile" href="./parte/" style="--i: 1">
+          <img class="app-tile__icon" src="./icons/parte.svg" alt="" width="96" height="96" decoding="async" />
+          <span class="app-tile__name">Parte</span>
         </a>
-        <a class="destination" href="./gastos/">
-          <span class="destination__name">Gastos</span>
-          <span class="destination__hint">Presupuesto semanal</span>
+        <a class="app-tile" href="./gastos/" style="--i: 2">
+          <img class="app-tile__icon" src="./icons/gastos.svg" alt="" width="96" height="96" decoding="async" />
+          <span class="app-tile__name">Gastos</span>
         </a>
       </nav>
     </main>
