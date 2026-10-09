@@ -8,7 +8,7 @@
   --as-active-text: #f3f7f5;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
   width: 100%;
   margin: 0 0 0.7rem;
@@ -34,7 +34,7 @@
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.15;
