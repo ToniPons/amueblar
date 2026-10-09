@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="Gastos" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="description" content="Controla cuánto quieres gastar esta semana, anota gastos al instante y mira si te pasaste y desde qué día." />
-  <title>Tracker Gastos — presupuesto semanal</title>
+  <meta name="description" content="Controla el gasto por periodos: define fechas, anota al instante y consulta el histórico." />
+  <title>Gastos — presupuesto por periodos</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,16 +25,13 @@
       --mist: #d9ebe4;
       --foam: #f3fbf7;
       --coral: #e85d4c;
-      --sky-wash: #cfe4ef;
       --muted: #455b53;
-      --radius: 1rem;
       --font-display: "Syne", system-ui, sans-serif;
       --font-body: "Figtree", system-ui, sans-serif;
       --safe-b: env(safe-area-inset-bottom, 0px);
       --safe-t: env(safe-area-inset-top, 0px);
       --shadow: 0 20px 60px rgba(10, 58, 54, 0.08);
     }
-
     * { box-sizing: border-box; }
     html { height: 100%; }
     body {
@@ -46,93 +43,79 @@
       background: var(--foam);
       -webkit-font-smoothing: antialiased;
     }
-    button, input, select, textarea { font: inherit; color: inherit; }
+    button, input, select { font: inherit; color: inherit; }
     button { cursor: pointer; border: none; background: none; }
     .sr-only {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
       overflow: hidden; clip: rect(0,0,0,0); border: 0;
     }
-
     .atmosphere {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background:
         radial-gradient(900px 520px at 8% -8%, rgba(61, 214, 140, 0.22), transparent 55%),
         radial-gradient(800px 480px at 100% 0%, rgba(207, 228, 239, 0.55), transparent 50%),
         linear-gradient(168deg, #e8f6f0 0%, var(--foam) 48%, #e7f0ea 100%);
     }
     .atmosphere::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      opacity: 0.35;
+      content: ""; position: absolute; inset: 0; opacity: 0.35;
       background-image: radial-gradient(rgba(16, 40, 38, 0.05) 0.7px, transparent 0.7px);
       background-size: 18px 18px;
       mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 75%);
     }
-
     .app {
-      position: relative;
-      z-index: 1;
+      position: relative; z-index: 1;
       width: min(48rem, 100%);
       margin: 0 auto;
       padding: calc(0.85rem + var(--safe-t)) 1rem calc(5.5rem + var(--safe-b));
-      display: flex;
-      flex-direction: column;
-      gap: 1.1rem;
+      display: flex; flex-direction: column; gap: 1.1rem;
       min-height: 100dvh;
     }
-
     .topbar {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 0.75rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
     }
     .brand-mini {
-      margin: 0;
-      font-family: var(--font-display);
-      font-size: 1.35rem;
-      letter-spacing: -0.02em;
-      color: var(--ink);
+      margin: 0; font-family: var(--font-display); font-size: 1.35rem;
+      letter-spacing: -0.02em; color: var(--ink);
     }
-    .week-chip {
-      margin: 0;
-      font-size: 0.82rem;
-      font-weight: 650;
-      color: color-mix(in oklab, var(--pine) 75%, transparent);
-      white-space: nowrap;
+    .period-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      max-width: min(62vw, 16rem);
+      min-height: 2.1rem; padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
+      background: rgba(255,255,255,0.65);
+      font-size: 0.82rem; font-weight: 650;
+      color: var(--pine);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .period-chip::after {
+      content: "";
+      width: 0.4rem; height: 0.4rem;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg) translateY(-1px);
+      opacity: 0.7; flex-shrink: 0;
     }
 
     .progress-block { animation: rise 0.45s ease both; }
     .progress-block .status {
-      margin: 0;
-      font-family: var(--font-display);
-      font-size: clamp(1.45rem, 5vw, 1.9rem);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--pine);
+      margin: 0; font-family: var(--font-display);
+      font-size: clamp(1.45rem, 5vw, 1.9rem); font-weight: 700;
+      letter-spacing: -0.02em; color: var(--pine);
     }
     .progress-block .status.is-over { color: var(--coral); }
     .progress-block .meta {
-      margin: 0.35rem 0 0;
-      font-size: 0.95rem;
+      margin: 0.35rem 0 0; font-size: 0.95rem;
       color: color-mix(in oklab, var(--ink) 55%, transparent);
     }
     .bar {
-      margin-top: 0.9rem;
-      height: 0.7rem;
-      width: min(100%, 24rem);
+      margin-top: 0.9rem; height: 0.7rem; width: min(100%, 24rem);
       border-radius: 999px;
       background: color-mix(in oklab, var(--ink) 8%, transparent);
       overflow: hidden;
     }
     .bar > span {
-      display: block;
-      height: 100%;
-      border-radius: inherit;
+      display: block; height: 100%; border-radius: inherit;
       background: linear-gradient(90deg, var(--pine), var(--kelp));
       transition: width 0.35s ease;
     }
@@ -149,159 +132,80 @@
       animation: rise 0.55s ease both;
     }
     @media (min-width: 640px) { .panel { padding: 1.5rem; } }
-
-    .panel h2 {
-      margin: 0;
+    .section-title {
+      margin: 0 0 0.75rem;
       font-family: var(--font-display);
-      font-size: 1.65rem;
+      font-size: 1.35rem;
       letter-spacing: -0.02em;
     }
     .field { display: grid; gap: 0.4rem; margin-bottom: 0.9rem; }
     .field label {
-      font-size: 0.875rem;
-      font-weight: 600;
+      font-size: 0.875rem; font-weight: 600;
       color: color-mix(in oklab, var(--ink) 70%, transparent);
     }
     .money-wrap { position: relative; }
     .money-wrap .euro {
-      position: absolute;
-      left: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-family: var(--font-display);
-      font-size: 1.5rem;
+      position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+      font-family: var(--font-display); font-size: 1.5rem;
       color: color-mix(in oklab, var(--ink) 35%, transparent);
       pointer-events: none;
     }
     .money-wrap input {
-      width: 100%;
-      height: 3.5rem;
-      padding: 0 1rem 0 2.6rem;
+      width: 100%; height: 3.5rem; padding: 0 1rem 0 2.6rem;
       border-radius: 1rem;
       border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
       background: rgba(255, 255, 255, 0.75);
-      font-size: 1.5rem;
-      font-weight: 650;
-      letter-spacing: -0.02em;
-      outline: none;
+      font-size: 1.5rem; font-weight: 650; letter-spacing: -0.02em; outline: none;
     }
-    .money-wrap.lg input {
-      height: 4rem;
-      font-size: 1.9rem;
-      padding-left: 2.8rem;
-    }
+    .money-wrap.lg input { height: 4rem; font-size: 1.9rem; padding-left: 2.8rem; }
     .money-wrap .euro.lg { font-size: 1.9rem; }
-    .money-wrap input:focus {
-      border-color: color-mix(in oklab, var(--pine) 45%, transparent);
-      box-shadow: 0 0 0 3px color-mix(in oklab, var(--kelp) 35%, transparent);
-    }
-    input[type="date"],
-    input[type="text"] {
-      width: 100%;
-      height: 2.75rem;
-      padding: 0 0.9rem;
-      border-radius: 0.85rem;
-      border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
-      background: rgba(255, 255, 255, 0.75);
-      outline: none;
-    }
+    .money-wrap input:focus,
     input[type="date"]:focus,
     input[type="text"]:focus {
       border-color: color-mix(in oklab, var(--pine) 45%, transparent);
       box-shadow: 0 0 0 3px color-mix(in oklab, var(--kelp) 35%, transparent);
     }
-
+    input[type="date"], input[type="text"] {
+      width: 100%; height: 2.75rem; padding: 0 0.9rem;
+      border-radius: 0.85rem;
+      border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
+      background: rgba(255, 255, 255, 0.75); outline: none;
+    }
+    .dates-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;
+    }
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 3rem;
-      padding: 0 1.15rem;
-      border-radius: 1rem;
-      font-weight: 650;
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 3rem; padding: 0 1.15rem; border-radius: 1rem; font-weight: 650;
       transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
       -webkit-tap-highlight-color: transparent;
     }
     .btn:active { transform: scale(0.98); }
     .btn:disabled { opacity: 0.45; pointer-events: none; }
-    .btn-primary {
-      background: var(--pine);
-      color: var(--foam);
-    }
-    .btn-primary:hover { background: color-mix(in oklab, var(--pine) 90%, black); }
-    .btn-kelp {
-      background: var(--kelp);
-      color: var(--pine);
-    }
-    .btn-kelp:hover { background: color-mix(in oklab, var(--kelp) 88%, black); }
+    .btn-primary { background: var(--pine); color: var(--foam); }
+    .btn-kelp { background: var(--kelp); color: var(--pine); }
     .btn-ghost {
       background: transparent;
       color: color-mix(in oklab, var(--pine) 75%, transparent);
-      text-decoration: underline;
-      text-underline-offset: 4px;
-      min-height: auto;
-      padding: 0.25rem 0;
-      border-radius: 0;
-      font-weight: 600;
-      font-size: 0.9rem;
+      text-decoration: underline; text-underline-offset: 4px;
+      min-height: auto; padding: 0.25rem 0; border-radius: 0;
+      font-weight: 600; font-size: 0.9rem;
     }
     .btn-danger-text {
       color: color-mix(in oklab, var(--ink) 40%, transparent);
-      font-size: 0.8rem;
-      font-weight: 600;
+      font-size: 0.8rem; font-weight: 600;
     }
     .btn-danger-text:hover { color: var(--coral); }
     .btn-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
     .chip {
-      min-height: 2.35rem;
-      padding: 0.45rem 0.9rem;
-      border-radius: 999px;
+      min-height: 2.35rem; padding: 0.45rem 0.9rem; border-radius: 999px;
       background: var(--mist);
       color: color-mix(in oklab, var(--ink) 75%, transparent);
-      font-size: 0.9rem;
-      font-weight: 600;
-      transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+      font-size: 0.9rem; font-weight: 600;
     }
-    .chip:active { transform: scale(0.97); }
-    .chip.is-active {
-      background: var(--pine);
-      color: var(--foam);
-    }
-
-    .alert {
-      margin: 0 0 0.75rem;
-      font-size: 0.9rem;
-      color: var(--coral);
-    }
-    .banner {
-      margin: 0;
-      padding: 0.85rem 1rem;
-      border-radius: 1rem;
-      background: color-mix(in oklab, var(--kelp) 22%, white);
-      color: var(--pine);
-      font-size: 0.92rem;
-      font-weight: 600;
-      animation: rise 0.4s ease both;
-    }
-    .banner.warn {
-      background: color-mix(in oklab, var(--coral) 16%, white);
-      color: #8a2f25;
-    }
-
-    .report-grid {
-      display: grid;
-      gap: 1rem;
-    }
-    @media (min-width: 640px) {
-      .report-grid { grid-template-columns: 1fr 1fr; }
-    }
+    .chip.is-active { background: var(--pine); color: var(--foam); }
+    .alert { margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--coral); }
     .stat-card {
       border-radius: 1.15rem;
       border: 1px solid rgba(255, 255, 255, 0.7);
@@ -309,195 +213,103 @@
       padding: 1.15rem;
     }
     .stat-card .label {
-      margin: 0;
-      font-size: 0.8rem;
-      font-weight: 650;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      margin: 0; font-size: 0.8rem; font-weight: 650;
+      letter-spacing: 0.04em; text-transform: uppercase;
       color: color-mix(in oklab, var(--ink) 50%, transparent);
     }
     .stat-card .value {
-      margin: 0.4rem 0 0;
-      font-family: var(--font-display);
-      font-size: 1.55rem;
-      letter-spacing: -0.02em;
+      margin: 0.4rem 0 0; font-family: var(--font-display);
+      font-size: 1.55rem; letter-spacing: -0.02em;
     }
     .stat-card .value.bad { color: var(--coral); }
     .stat-card .value.ok { color: var(--pine); }
-    .stat-card .sub {
-      margin: 0.35rem 0 0;
-      font-size: 0.88rem;
-      color: color-mix(in oklab, var(--ink) 55%, transparent);
-    }
-
-    .cat-list, .day-list, .expense-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
+    .cat-list, .day-list, .expense-list, .period-list {
+      list-style: none; margin: 0; padding: 0;
     }
     .cat-list li, .day-list li {
-      display: grid;
-      gap: 0.25rem;
-      padding: 0.55rem 0;
+      display: grid; gap: 0.25rem; padding: 0.55rem 0;
     }
     .cat-list li + li, .day-list li + li {
       border-top: 1px solid color-mix(in oklab, var(--ink) 8%, transparent);
     }
     .row-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 0.75rem;
-      align-items: baseline;
+      display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline;
     }
     .row-top strong { font-weight: 650; }
     .row-top .amt { font-variant-numeric: tabular-nums; font-weight: 700; }
     .mini-bar {
-      height: 0.35rem;
-      border-radius: 999px;
-      background: color-mix(in oklab, var(--ink) 8%, transparent);
-      overflow: hidden;
+      height: 0.35rem; border-radius: 999px;
+      background: color-mix(in oklab, var(--ink) 8%, transparent); overflow: hidden;
     }
     .mini-bar > span {
-      display: block;
-      height: 100%;
-      background: var(--pine);
-      border-radius: inherit;
-      min-width: 4%;
+      display: block; height: 100%; background: var(--pine);
+      border-radius: inherit; min-width: 4%;
     }
     .day-list li.is-breach {
       background: color-mix(in oklab, var(--coral) 8%, transparent);
-      margin: 0 -0.5rem;
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-      border-radius: 0.6rem;
+      margin: 0 -0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; border-radius: 0.6rem;
     }
     .day-list li.is-today strong::after {
-      content: " · hoy";
-      font-weight: 500;
-      color: color-mix(in oklab, var(--pine) 70%, transparent);
-      font-size: 0.82em;
+      content: " · hoy"; font-weight: 500;
+      color: color-mix(in oklab, var(--pine) 70%, transparent); font-size: 0.82em;
     }
-
     .expense-list { border-top: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); }
     .expense-list li {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.5rem 0.75rem;
-      align-items: center;
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 0.5rem 0.75rem; align-items: center;
       padding: 0.85rem 0;
       border-bottom: 1px solid color-mix(in oklab, var(--ink) 8%, transparent);
     }
     .expense-list .title { font-weight: 650; }
     .expense-list .sub {
-      font-size: 0.82rem;
+      font-size: 0.82rem; margin-top: 0.15rem;
       color: color-mix(in oklab, var(--ink) 50%, transparent);
-      margin-top: 0.15rem;
     }
-    .expense-list .amt {
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      text-align: right;
-    }
-    .expense-list .actions {
-      grid-column: 1 / -1;
-      display: flex;
-      gap: 0.85rem;
-    }
-
+    .expense-list .amt { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+    .expense-list .actions { grid-column: 1 / -1; display: flex; gap: 0.85rem; }
     .empty {
-      margin: 0;
-      padding: 1.75rem 1rem;
-      text-align: center;
+      margin: 0; padding: 1.75rem 1rem; text-align: center;
       border: 1px dashed color-mix(in oklab, var(--ink) 15%, transparent);
-      border-radius: 1.15rem;
-      background: rgba(255, 255, 255, 0.4);
+      border-radius: 1.15rem; background: rgba(255, 255, 255, 0.4);
       color: color-mix(in oklab, var(--ink) 55%, transparent);
     }
-
-    .section-title {
-      margin: 0 0 0.75rem;
-      font-family: var(--font-display);
-      font-size: 1.35rem;
-      letter-spacing: -0.02em;
-    }
-
     footer.app-foot {
-      margin-top: auto;
-      padding-top: 0.75rem;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 1rem;
+      margin-top: auto; padding-top: 0.75rem;
+      display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 1rem;
     }
-
     .fab {
       position: fixed;
       right: max(1rem, env(safe-area-inset-right, 0px));
       bottom: calc(1rem + var(--safe-b));
-      z-index: 30;
-      width: 3.6rem;
-      height: 3.6rem;
-      border-radius: 999px;
-      background: var(--pine);
-      color: var(--foam);
+      z-index: 30; width: 3.6rem; height: 3.6rem; border-radius: 999px;
+      background: var(--pine); color: var(--foam);
       box-shadow: 0 12px 28px rgba(10, 58, 54, 0.28);
-      display: grid;
-      place-items: center;
-      font-size: 2rem;
-      font-weight: 500;
-      line-height: 1;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
+      display: grid; place-items: center;
     }
-    .fab:active { transform: scale(0.96); }
     .fab[hidden] { display: none; }
     .fab svg { width: 1.55rem; height: 1.55rem; display: block; }
-
     .toast {
-      position: fixed;
-      left: 50%;
-      bottom: calc(1.25rem + var(--safe-b));
-      transform: translateX(-50%) translateY(16px);
-      opacity: 0;
-      pointer-events: none;
-      z-index: 50;
-      padding: 0.7rem 1.1rem;
-      border-radius: 999px;
-      background: var(--pine);
-      color: var(--foam);
-      font-size: 0.9rem;
-      font-weight: 650;
-      box-shadow: var(--shadow);
+      position: fixed; left: 50%; bottom: calc(1.25rem + var(--safe-b));
+      transform: translateX(-50%) translateY(16px); opacity: 0;
+      pointer-events: none; z-index: 60;
+      padding: 0.7rem 1.1rem; border-radius: 999px;
+      background: var(--pine); color: var(--foam);
+      font-size: 0.9rem; font-weight: 650; box-shadow: var(--shadow);
       transition: opacity 0.22s ease, transform 0.22s ease;
-      white-space: nowrap;
-      max-width: calc(100vw - 2rem);
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: nowrap; max-width: calc(100vw - 2rem);
+      overflow: hidden; text-overflow: ellipsis;
     }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .sheet-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(16, 40, 38, 0.45);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease;
-      z-index: 40;
+      position: fixed; inset: 0; background: rgba(16, 40, 38, 0.45);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease; z-index: 40;
     }
     .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     .sheet {
-      position: fixed;
-      left: 50%;
-      bottom: 0;
+      position: fixed; left: 50%; bottom: 0;
       transform: translate(-50%, 110%);
-      width: min(32rem, 100%);
-      max-height: min(90dvh, 640px);
-      overflow: auto;
-      background: #f6fefb;
+      width: min(32rem, 100%); max-height: min(90dvh, 680px);
+      overflow: auto; background: #f6fefb;
       border-radius: 1.35rem 1.35rem 0 0;
       box-shadow: 0 -18px 50px rgba(10, 58, 54, 0.18);
       z-index: 50;
@@ -506,18 +318,38 @@
     }
     .sheet.open { transform: translate(-50%, 0); }
     .sheet-handle {
-      width: 2.5rem;
-      height: 0.25rem;
-      border-radius: 999px;
+      width: 2.5rem; height: 0.25rem; border-radius: 999px;
       background: color-mix(in oklab, var(--ink) 18%, transparent);
       margin: 0.25rem auto 1rem;
     }
     .sheet h2 {
-      margin: 0 0 1rem;
-      font-family: var(--font-display);
-      font-size: 1.45rem;
+      margin: 0 0 1rem; font-family: var(--font-display); font-size: 1.45rem;
     }
     body.sheet-open { overflow: hidden; }
+
+    .period-list li + li { margin-top: 0.5rem; }
+    .period-item {
+      width: 100%; text-align: left;
+      display: grid; gap: 0.2rem;
+      padding: 0.85rem 0.95rem; border-radius: 1rem;
+      border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent);
+      background: #fff;
+    }
+    .period-item.is-active {
+      border-color: color-mix(in oklab, var(--pine) 35%, transparent);
+      box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--pine) 20%, transparent);
+      background: color-mix(in oklab, var(--seafoam) 45%, white);
+    }
+    .period-item .title { font-weight: 700; }
+    .period-item .meta {
+      font-size: 0.85rem;
+      color: color-mix(in oklab, var(--ink) 55%, transparent);
+    }
+    .period-item .badge {
+      display: inline-flex; margin-top: 0.2rem;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--pine);
+    }
 
     @keyframes rise {
       from { opacity: 0; transform: translateY(12px); }
@@ -539,21 +371,20 @@
     <header>
       <div class="topbar">
         <h1 class="brand-mini">Gastos</h1>
-        <p class="week-chip" id="week-label">Semana actual</p>
+        <button type="button" class="period-chip" id="period-chip" aria-haspopup="dialog">Periodo</button>
       </div>
       <div class="progress-block" id="progress-block" hidden>
         <p class="status" id="progress-status"></p>
         <p class="meta" id="progress-meta"></p>
         <div class="bar" id="progress-bar" aria-hidden="true"><span id="progress-fill"></span></div>
       </div>
-      <p class="banner" id="week-rollover" hidden></p>
     </header>
 
-    <section class="panel" aria-label="Presupuesto semanal" id="budget-section">
-      <h2 class="section-title" id="budget-heading">Tope semanal</h2>
+    <section class="panel" aria-label="Tope del periodo" id="budget-section">
+      <h2 class="section-title" id="budget-heading">Tope del periodo</h2>
       <form id="budget-form">
         <div class="field">
-          <label class="sr-only" for="budget-input">Tope semanal</label>
+          <label class="sr-only" for="budget-input">Tope del periodo</label>
           <div class="money-wrap">
             <span class="euro" aria-hidden="true">€</span>
             <input id="budget-input" inputmode="decimal" placeholder="200" autocomplete="off" required />
@@ -566,7 +397,15 @@
       </form>
     </section>
 
-    <section aria-label="Informe semanal">
+    <section class="panel" id="no-period" hidden>
+      <h2 class="section-title">Sin periodo</h2>
+      <p class="empty" style="border:none;background:transparent;padding:0.25rem 0 1rem;text-align:left">
+        Crea un periodo con fechas (semana, mes o a medida) para empezar.
+      </p>
+      <button type="button" class="btn btn-primary" id="btn-create-first" style="width:100%">Nuevo periodo</button>
+    </section>
+
+    <section aria-label="Informe del periodo" id="report-section">
       <h2 class="section-title">Informe</h2>
       <div id="report-empty" class="empty" hidden>Fija un tope para ver el informe.</div>
       <div id="report-body" hidden>
@@ -574,17 +413,14 @@
           <p class="label">Se agotó</p>
           <p class="value" id="stat-ranout"></p>
         </div>
-
         <div class="panel" style="margin-bottom:1rem" id="cat-panel" hidden>
           <h3 class="section-title" style="font-size:1.15rem">Por categoría</h3>
           <ul class="cat-list" id="cat-list"></ul>
         </div>
-
         <div class="panel" style="margin-bottom:1rem" id="day-panel" hidden>
           <h3 class="section-title" style="font-size:1.15rem">Por día</h3>
           <ul class="day-list" id="day-list"></ul>
         </div>
-
         <div class="panel" id="list-panel" hidden>
           <h3 class="section-title" style="font-size:1.15rem">Gastos</h3>
           <ul class="expense-list" id="expense-list"></ul>
@@ -594,7 +430,7 @@
 
     <footer class="app-foot">
       <button type="button" class="btn-ghost" id="btn-edit-budget" hidden>Cambiar tope</button>
-      <button type="button" class="btn-ghost" id="btn-reset">Reiniciar semana</button>
+      <button type="button" class="btn-ghost" id="btn-reset" hidden>Vaciar periodo</button>
     </footer>
   </div>
 
@@ -605,6 +441,38 @@
   </button>
 
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+
+  <div class="sheet" id="periods-sheet" role="dialog" aria-modal="true" aria-labelledby="periods-title" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h2 id="periods-title">Periodos</h2>
+    <button type="button" class="btn btn-kelp" id="btn-new-period" style="width:100%;margin-bottom:1rem">Nuevo periodo</button>
+    <ul class="period-list" id="period-list"></ul>
+    <p class="empty" id="periods-empty" hidden>Aún no hay periodos.</p>
+  </div>
+
+  <div class="sheet" id="new-period-sheet" role="dialog" aria-modal="true" aria-labelledby="new-period-title" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h2 id="new-period-title">Nuevo periodo</h2>
+    <div class="chips" id="period-presets" role="group" aria-label="Atajos">
+      <button type="button" class="chip" data-preset="week">Esta semana</button>
+      <button type="button" class="chip" data-preset="7d">7 días</button>
+      <button type="button" class="chip" data-preset="month">Este mes</button>
+    </div>
+    <form id="new-period-form">
+      <div class="dates-row">
+        <div class="field">
+          <label for="period-start">Inicio</label>
+          <input id="period-start" type="date" required />
+        </div>
+        <div class="field">
+          <label for="period-end">Fin</label>
+          <input id="period-end" type="date" required />
+        </div>
+      </div>
+      <p class="alert" id="period-error" hidden></p>
+      <button type="submit" class="btn btn-primary" style="width:100%">Crear</button>
+    </form>
+  </div>
 
   <div class="sheet" id="add-sheet" role="dialog" aria-modal="true" aria-labelledby="add-title" hidden>
     <div class="sheet-handle" aria-hidden="true"></div>
@@ -670,8 +538,9 @@
 
   <script>
 (function () {
-  const STORAGE_KEY = "tracker-gastos-v1";
-  const ARCHIVE_KEY = "tracker-gastos-archive-v1";
+  const LEGACY_KEY = "tracker-gastos-v1";
+  const LEGACY_ARCHIVE = "tracker-gastos-archive-v1";
+  const STORE_KEY = "gastos-periods-v1";
   const CATEGORIES = [
     { id: "comida", label: "Comida" },
     { id: "transporte", label: "Transporte" },
@@ -685,7 +554,6 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  /** Monday 00:00 local */
   function startOfWeek(d = new Date()) {
     const t = new Date(d);
     t.setHours(0, 0, 0, 0);
@@ -696,16 +564,11 @@
   function endOfWeek(d = new Date()) {
     const t = startOfWeek(d);
     t.setDate(t.getDate() + 6);
-    t.setHours(23, 59, 59, 999);
     return t;
   }
-  /** ISO-like week id: YYYY-Www (Monday-based, compatible with previous app intent) */
-  function weekId(d = new Date()) {
-    const monday = startOfWeek(d);
-    const year = monday.getFullYear();
-    const jan1 = new Date(year, 0, 1);
-    const week = Math.ceil(((monday - jan1) / 86400000 + jan1.getDay() + 1) / 7);
-    return `${year}-W${String(week).padStart(2, "0")}`;
+  function parseISODate(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d);
   }
   function dateKey(d) {
     const y = d.getFullYear();
@@ -713,24 +576,33 @@
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   }
-  function weekLabel(d = new Date()) {
-    const a = startOfWeek(d);
-    const b = endOfWeek(d);
-    if (a.getMonth() === b.getMonth()) {
+  function addDays(iso, n) {
+    const d = parseISODate(iso);
+    d.setDate(d.getDate() + n);
+    return dateKey(d);
+  }
+  function daysBetween(start, end) {
+    const a = parseISODate(start).getTime();
+    const b = parseISODate(end).getTime();
+    return Math.round((b - a) / 86400000);
+  }
+  function formatRange(start, end) {
+    const a = parseISODate(start);
+    const b = parseISODate(end);
+    if (a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()) {
       return `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]}`;
     }
-    return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+    if (a.getFullYear() === b.getFullYear()) {
+      return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+    }
+    return `${a.getDate()} ${MONTHS[a.getMonth()]} ${a.getFullYear()} – ${b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
   }
   function parseAmount(raw) {
     if (typeof raw !== "string") return NaN;
     let s = raw.trim().replace(/\s/g, "").replace(/€/g, "");
     if (!s) return NaN;
-    if (s.includes(",") && s.includes(".")) {
-      // 1.234,56 → 1234.56
-      s = s.replace(/\./g, "").replace(",", ".");
-    } else {
-      s = s.replace(",", ".");
-    }
+    if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(",", ".");
     const n = Number(s);
     return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
   }
@@ -741,86 +613,127 @@
       maximumFractionDigits: n % 1 !== 0 ? 2 : 0,
     }).format(n || 0);
   }
-  function uid() {
+  function uid(prefix = "id") {
     if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-    return `exp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   }
   function catLabel(id) {
     return CATEGORIES.find((c) => c.id === id)?.label || id;
   }
-  function emptyState() {
-    return { weekId: weekId(), budget: null, expenses: [] };
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
-  function load() {
+  function weekBoundsFromLegacyWeekId(weekId) {
+    // Best-effort: current week if id matches today, else use today week
+    const monday = startOfWeek();
+    return { start: dateKey(monday), end: dateKey(endOfWeek(monday)) };
+  }
+
+  function migrateLegacy() {
+    const periods = [];
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { state: emptyState(), rolled: false };
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") return { state: emptyState(), rolled: false };
-      const current = weekId();
-      if (parsed.weekId !== current) {
-        // Archive previous week before wiping
-        try {
-          const archive = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || "[]");
-          if (Array.isArray(archive) && parsed.weekId) {
-            archive.unshift({
-              weekId: parsed.weekId,
-              budget: parsed.budget,
-              expenses: parsed.expenses || [],
-              archivedAt: new Date().toISOString(),
-            });
-            localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive.slice(0, 12)));
-          }
-        } catch { /* ignore */ }
-        return { state: emptyState(), rolled: true, prevWeekId: parsed.weekId };
+      const archive = JSON.parse(localStorage.getItem(LEGACY_ARCHIVE) || "[]");
+      if (Array.isArray(archive)) {
+        for (const item of archive) {
+          const bounds = weekBoundsFromLegacyWeekId(item.weekId);
+          periods.push({
+            id: uid("per"),
+            start: bounds.start,
+            end: bounds.end,
+            budget: typeof item.budget === "number" ? item.budget : null,
+            expenses: Array.isArray(item.expenses) ? item.expenses : [],
+            createdAt: item.archivedAt || new Date().toISOString(),
+            legacyWeekId: item.weekId || null,
+          });
+        }
       }
-      return {
-        state: {
-          weekId: parsed.weekId,
-          budget:
-            typeof parsed.budget === "number" && Number.isFinite(parsed.budget)
-              ? parsed.budget
-              : null,
-          expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
-        },
-        rolled: false,
-      };
-    } catch {
-      return { state: emptyState(), rolled: false };
+    } catch { /* ignore */ }
+    try {
+      const raw = localStorage.getItem(LEGACY_KEY);
+      if (raw) {
+        const cur = JSON.parse(raw);
+        if (cur && typeof cur === "object") {
+          const bounds = weekBoundsFromLegacyWeekId(cur.weekId);
+          periods.unshift({
+            id: uid("per"),
+            start: bounds.start,
+            end: bounds.end,
+            budget: typeof cur.budget === "number" ? cur.budget : null,
+            expenses: Array.isArray(cur.expenses) ? cur.expenses : [],
+            createdAt: new Date().toISOString(),
+            legacyWeekId: cur.weekId || null,
+          });
+        }
+      }
+    } catch { /* ignore */ }
+    return periods;
+  }
+
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.periods)) {
+          return {
+            periods: parsed.periods,
+            activeId: parsed.activeId || parsed.periods[0]?.id || null,
+          };
+        }
+      }
+    } catch { /* ignore */ }
+
+    const migrated = migrateLegacy();
+    if (migrated.length) {
+      const store = { periods: migrated, activeId: migrated[0].id };
+      saveStore(store);
+      try {
+        localStorage.removeItem(LEGACY_KEY);
+        localStorage.removeItem(LEGACY_ARCHIVE);
+      } catch { /* ignore */ }
+      return store;
     }
+    return { periods: [], activeId: null };
   }
 
-  function save(state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  function saveStore(store) {
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
   }
 
-  function buildReport(state) {
-    const budget = state.budget;
-    const expenses = [...state.expenses].sort(
+  function activePeriod(store) {
+    return store.periods.find((p) => p.id === store.activeId) || null;
+  }
+
+  function buildReport(period) {
+    const budget = period.budget;
+    const expenses = [...period.expenses].sort(
       (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
     );
     const totalSpent = expenses.reduce((s, e) => s + (e.amount || 0), 0);
     const remaining = budget == null ? 0 : budget - totalSpent;
     const exceeded = budget != null && totalSpent > budget;
-
-    const monday = startOfWeek();
     const todayKey = dateKey(new Date());
-    const byDay = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const key = dateKey(d);
+    const span = Math.max(0, daysBetween(period.start, period.end));
+    const byDay = [];
+    for (let i = 0; i <= span; i++) {
+      const key = addDays(period.start, i);
+      const d = parseISODate(key);
       const spent = expenses
         .filter((e) => dateKey(new Date(e.createdAt)) === key)
         .reduce((s, e) => s + e.amount, 0);
-      return {
+      byDay.push({
         dateKey: key,
         label: `${DAY_NAMES[d.getDay()]} ${d.getDate()}`,
         spent,
         cumulative: 0,
         isToday: key === todayKey,
-      };
-    });
+      });
+    }
     let cum = 0;
     for (const day of byDay) {
       cum += day.spent;
@@ -832,7 +745,6 @@
         byDay.find((d) => d.cumulative >= budget && d.spent > 0) ||
         (totalSpent >= budget ? byDay.find((d) => d.cumulative >= budget) || null : null);
     }
-
     const map = new Map();
     for (const e of expenses) {
       const cur = map.get(e.category) || { total: 0, count: 0 };
@@ -863,40 +775,46 @@
     };
   }
 
-  // —— State ——
-  const loaded = load();
-  let state = loaded.state;
+  let store = loadStore();
   let selectedCat = "comida";
+  let budgetCollapsed = false;
 
-  // —— DOM ——
-  const weekLabelEl = $("#week-label");
+  const periodChip = $("#period-chip");
   const progressBlock = $("#progress-block");
   const progressStatus = $("#progress-status");
   const progressMeta = $("#progress-meta");
   const progressBar = $("#progress-bar");
   const progressFill = $("#progress-fill");
-  const weekRollover = $("#week-rollover");
   const budgetSection = $("#budget-section");
   const budgetInput = $("#budget-input");
   const budgetError = $("#budget-error");
   const budgetSubmit = $("#budget-submit");
   const budgetHeading = $("#budget-heading");
   const btnEditBudget = $("#btn-edit-budget");
-  const expenseForm = $("#expense-form");
+  const btnReset = $("#btn-reset");
+  const noPeriod = $("#no-period");
+  const reportSection = $("#report-section");
   const expenseAmount = $("#expense-amount");
   const expenseNote = $("#expense-note");
   const expenseDate = $("#expense-date");
   const expenseError = $("#expense-error");
   const expenseSubmit = $("#expense-submit");
   const fabAdd = $("#fab-add");
+  const periodsSheet = $("#periods-sheet");
+  const newPeriodSheet = $("#new-period-sheet");
   const addSheet = $("#add-sheet");
   const editSheet = $("#edit-sheet");
   const sheetBackdrop = $("#sheet-backdrop");
+  const periodList = $("#period-list");
+  const periodsEmpty = $("#periods-empty");
+  const periodStart = $("#period-start");
+  const periodEnd = $("#period-end");
+  const periodError = $("#period-error");
   const catChips = $("#cat-chips");
   const reportEmpty = $("#report-empty");
   const reportBody = $("#report-body");
   const toastEl = $("#toast");
-  let budgetCollapsed = false;
+  const sheets = [periodsSheet, newPeriodSheet, addSheet, editSheet];
 
   function toast(msg) {
     toastEl.textContent = msg;
@@ -905,16 +823,31 @@
     toast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
   }
 
-  function weekBoundsISO() {
-    return { min: dateKey(startOfWeek()), max: dateKey(endOfWeek()) };
+  function persist() {
+    saveStore(store);
+  }
+
+  function updateActive(mutator) {
+    const idx = store.periods.findIndex((p) => p.id === store.activeId);
+    if (idx < 0) return;
+    store.periods[idx] = mutator({ ...store.periods[idx], expenses: [...store.periods[idx].expenses] });
+    persist();
+  }
+
+  function periodBounds() {
+    const p = activePeriod(store);
+    if (!p) return { min: dateKey(new Date()), max: dateKey(new Date()) };
+    return { min: p.start, max: p.end };
   }
 
   function syncDateInputs() {
-    const { min, max } = weekBoundsISO();
+    const { min, max } = periodBounds();
     expenseDate.min = min;
     expenseDate.max = max;
+    const today = dateKey(new Date());
+    const preferred = today < min ? min : today > max ? max : today;
     if (!expenseDate.value || expenseDate.value < min || expenseDate.value > max) {
-      expenseDate.value = dateKey(new Date());
+      expenseDate.value = preferred;
     }
     const editDate = $("#edit-date");
     if (editDate) {
@@ -931,6 +864,12 @@
   }
 
   function openSheet(sheet) {
+    sheets.forEach((s) => {
+      if (s !== sheet) {
+        s.classList.remove("open");
+        s.hidden = true;
+      }
+    });
     sheetBackdrop.hidden = false;
     sheet.hidden = false;
     requestAnimationFrame(() => {
@@ -941,20 +880,63 @@
   }
 
   function closeSheets() {
-    [addSheet, editSheet].forEach((sheet) => sheet.classList.remove("open"));
+    sheets.forEach((s) => s.classList.remove("open"));
     sheetBackdrop.classList.remove("open");
     document.body.classList.remove("sheet-open");
     setTimeout(() => {
-      addSheet.hidden = true;
-      editSheet.hidden = true;
+      sheets.forEach((s) => { s.hidden = true; });
       sheetBackdrop.hidden = true;
     }, 280);
   }
 
+  function renderPeriodList() {
+    if (!store.periods.length) {
+      periodList.innerHTML = "";
+      periodsEmpty.hidden = false;
+      return;
+    }
+    periodsEmpty.hidden = true;
+    const sorted = [...store.periods].sort((a, b) => b.start.localeCompare(a.start) || b.createdAt.localeCompare(a.createdAt));
+    periodList.innerHTML = sorted
+      .map((p) => {
+        const spent = (p.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+        const budgetTxt = p.budget != null ? `${formatEuro(spent)} / ${formatEuro(p.budget)}` : formatEuro(spent);
+        const active = p.id === store.activeId;
+        return `<li>
+          <button type="button" class="period-item${active ? " is-active" : ""}" data-select-period="${p.id}">
+            <span class="title">${escapeHtml(formatRange(p.start, p.end))}</span>
+            <span class="meta">${budgetTxt} · ${(p.expenses || []).length} gastos</span>
+            ${active ? '<span class="badge">Actual</span>' : ""}
+          </button>
+        </li>`;
+      })
+      .join("");
+  }
+
+  function openPeriods() {
+    renderPeriodList();
+    openSheet(periodsSheet);
+  }
+
+  function openNewPeriod() {
+    const monday = startOfWeek();
+    periodStart.value = dateKey(monday);
+    periodEnd.value = dateKey(endOfWeek(monday));
+    periodError.hidden = true;
+    openSheet(newPeriodSheet);
+  }
+
   function openAddSheet() {
-    if (state.budget == null || state.budget <= 0) {
+    const period = activePeriod(store);
+    if (!period) {
+      toast("Crea un periodo primero");
+      openNewPeriod();
+      return;
+    }
+    if (period.budget == null || period.budget <= 0) {
       toast("Fija un tope primero");
-      budgetSection.scrollIntoView({ behavior: "smooth", block: "center" });
+      budgetCollapsed = false;
+      render();
       budgetInput.focus();
       return;
     }
@@ -966,27 +948,34 @@
   }
 
   function render() {
-    const report = buildReport(state);
-    const hasBudget = report.budget != null && report.budget > 0;
-    weekLabelEl.textContent = weekLabel();
+    const period = activePeriod(store);
+    const hasPeriod = Boolean(period);
+    const hasBudget = hasPeriod && period.budget != null && period.budget > 0;
+
+    periodChip.textContent = hasPeriod ? formatRange(period.start, period.end) : "Elegir periodo";
+    noPeriod.hidden = hasPeriod;
+    reportSection.hidden = !hasPeriod;
+    budgetSection.hidden = !hasPeriod || (hasBudget && budgetCollapsed);
+    btnEditBudget.hidden = !(hasPeriod && hasBudget && budgetCollapsed);
+    btnReset.hidden = !hasPeriod;
+    fabAdd.hidden = !hasPeriod;
+
+    if (!hasPeriod) {
+      progressBlock.hidden = true;
+      return;
+    }
 
     if (hasBudget) {
-      budgetInput.value = String(report.budget).replace(".", ",");
+      budgetInput.value = String(period.budget).replace(".", ",");
       budgetSubmit.textContent = "Guardar";
-      budgetHeading.textContent = "Tope semanal";
-      budgetSection.hidden = budgetCollapsed;
-      btnEditBudget.hidden = !budgetCollapsed;
     } else {
+      budgetSubmit.textContent = "Fijar";
       budgetCollapsed = false;
       budgetSection.hidden = false;
       btnEditBudget.hidden = true;
-      budgetSubmit.textContent = "Fijar";
-      budgetHeading.textContent = "Tope semanal";
     }
 
-    fabAdd.hidden = false;
-
-    // Progress
+    const report = buildReport(period);
     if (hasBudget) {
       progressBlock.hidden = false;
       const pct = Math.min(1, report.totalSpent / report.budget);
@@ -997,14 +986,12 @@
       progressMeta.textContent = `${formatEuro(report.totalSpent)} de ${formatEuro(report.budget)}`;
       progressFill.style.width = `${Math.round(pct * 100)}%`;
       progressBar.classList.toggle("is-over", report.exceeded);
-      progressBar.setAttribute("aria-label", "Progreso del presupuesto semanal");
     } else {
       progressBlock.hidden = true;
     }
 
     expenseSubmit.disabled = !hasBudget;
 
-    // Report
     if (!hasBudget) {
       reportEmpty.hidden = false;
       reportBody.hidden = true;
@@ -1032,15 +1019,17 @@
             </li>`
           )
           .join("");
-      } else {
-        catPanel.hidden = true;
-      }
+      } else catPanel.hidden = true;
 
       const dayPanel = $("#day-panel");
-      const hasDaySpend = report.byDay.some((d) => d.spent > 0);
-      if (hasDaySpend) {
+      const daysWithSpend = report.byDay.filter((d) => d.spent > 0);
+      // Show days with spend; if none, hide. For short periods also show empty days? Prefer only spent + today.
+      const daysToShow = report.byDay.length <= 14
+        ? report.byDay
+        : report.byDay.filter((d) => d.spent > 0 || d.isToday);
+      if (daysWithSpend.length || report.byDay.length <= 14) {
         dayPanel.hidden = false;
-        $("#day-list").innerHTML = report.byDay
+        $("#day-list").innerHTML = daysToShow
           .map((d) => {
             const breach =
               report.budget != null &&
@@ -1052,9 +1041,7 @@
             </li>`;
           })
           .join("");
-      } else {
-        dayPanel.hidden = true;
-      }
+      } else dayPanel.hidden = true;
 
       const listPanel = $("#list-panel");
       if (report.expensesNewest.length) {
@@ -1077,29 +1064,89 @@
             </li>`;
           })
           .join("");
-      } else {
-        listPanel.hidden = true;
-      }
+      } else listPanel.hidden = true;
     }
 
     renderChips();
     syncDateInputs();
   }
 
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
+  // Events
+  periodChip.addEventListener("click", openPeriods);
+  $("#btn-create-first").addEventListener("click", openNewPeriod);
+  $("#btn-new-period").addEventListener("click", openNewPeriod);
+  fabAdd.addEventListener("click", openAddSheet);
+  sheetBackdrop.addEventListener("click", closeSheets);
+  $("#edit-cancel").addEventListener("click", closeSheets);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && sheets.some((s) => !s.hidden)) closeSheets();
+  });
 
-  // —— Events ——
-  catChips.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-cat]");
+  periodList.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-select-period]");
     if (!btn) return;
-    selectedCat = btn.dataset.cat;
-    renderChips();
+    store.activeId = btn.dataset.selectPeriod;
+    budgetCollapsed = Boolean(activePeriod(store)?.budget);
+    persist();
+    closeSheets();
+    render();
+    toast("Periodo abierto");
+  });
+
+  $("#period-presets").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-preset]");
+    if (!btn) return;
+    const today = new Date();
+    if (btn.dataset.preset === "week") {
+      periodStart.value = dateKey(startOfWeek(today));
+      periodEnd.value = dateKey(endOfWeek(today));
+    } else if (btn.dataset.preset === "7d") {
+      periodStart.value = dateKey(today);
+      periodEnd.value = addDays(dateKey(today), 6);
+    } else if (btn.dataset.preset === "month") {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      periodStart.value = dateKey(start);
+      periodEnd.value = dateKey(end);
+    }
+  });
+
+  $("#new-period-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const start = periodStart.value;
+    const end = periodEnd.value;
+    if (!start || !end) {
+      periodError.hidden = false;
+      periodError.textContent = "Elige inicio y fin.";
+      return;
+    }
+    if (end < start) {
+      periodError.hidden = false;
+      periodError.textContent = "El fin no puede ser anterior al inicio.";
+      return;
+    }
+    if (daysBetween(start, end) > 92) {
+      periodError.hidden = false;
+      periodError.textContent = "Máximo 93 días por periodo.";
+      return;
+    }
+    periodError.hidden = true;
+    const period = {
+      id: uid("per"),
+      start,
+      end,
+      budget: null,
+      expenses: [],
+      createdAt: new Date().toISOString(),
+    };
+    store.periods.unshift(period);
+    store.activeId = period.id;
+    budgetCollapsed = false;
+    persist();
+    closeSheets();
+    render();
+    toast("Periodo creado");
+    budgetInput.focus();
   });
 
   $("#budget-form").addEventListener("submit", (e) => {
@@ -1107,17 +1154,15 @@
     const amount = parseAmount(budgetInput.value);
     if (!Number.isFinite(amount) || amount <= 0) {
       budgetError.hidden = false;
-      budgetError.textContent = "Introduce un presupuesto semanal válido.";
+      budgetError.textContent = "Introduce un tope válido.";
       budgetInput.focus();
       return;
     }
     budgetError.hidden = true;
-    const wasSet = state.budget != null;
-    state = { ...state, budget: amount };
-    save(state);
+    updateActive((p) => ({ ...p, budget: amount }));
     budgetCollapsed = true;
     render();
-    toast(wasSet ? "Tope actualizado" : "Tope fijado");
+    toast("Tope fijado");
   });
 
   btnEditBudget.addEventListener("click", () => {
@@ -1127,11 +1172,17 @@
     budgetInput.focus();
   });
 
-  fabAdd.addEventListener("click", openAddSheet);
+  catChips.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-cat]");
+    if (!btn) return;
+    selectedCat = btn.dataset.cat;
+    renderChips();
+  });
 
-  expenseForm.addEventListener("submit", (e) => {
+  $("#expense-form").addEventListener("submit", (e) => {
     e.preventDefault();
-    if (state.budget == null) return;
+    const period = activePeriod(store);
+    if (!period || period.budget == null) return;
     const amount = parseAmount(expenseAmount.value);
     if (!Number.isFinite(amount) || amount <= 0) {
       expenseError.hidden = false;
@@ -1139,35 +1190,25 @@
       expenseAmount.focus();
       return;
     }
-    if (!selectedCat) {
-      expenseError.hidden = false;
-      expenseError.textContent = "Elige una categoría.";
-      return;
-    }
-    const { min, max } = weekBoundsISO();
+    const { min, max } = periodBounds();
     let day = expenseDate.value || dateKey(new Date());
     if (day < min || day > max) {
       expenseError.hidden = false;
-      expenseError.textContent = "La fecha debe estar en esta semana.";
+      expenseError.textContent = "La fecha debe estar en el periodo.";
       return;
     }
     expenseError.hidden = true;
-
-    // Stamp time as noon local to avoid TZ day shifts
-    const createdAt = new Date(`${day}T12:00:00`).toISOString();
     const note = expenseNote.value.trim();
     const expense = {
-      id: uid(),
+      id: uid("exp"),
       amount,
       category: selectedCat,
       note: note || undefined,
-      createdAt,
+      createdAt: new Date(`${day}T12:00:00`).toISOString(),
     };
-    state = { ...state, expenses: [expense, ...state.expenses] };
-    save(state);
+    updateActive((p) => ({ ...p, expenses: [expense, ...p.expenses] }));
     expenseAmount.value = "";
     expenseNote.value = "";
-    expenseDate.value = dateKey(new Date());
     closeSheets();
     render();
     toast("Gasto añadido");
@@ -1176,41 +1217,30 @@
   $("#expense-list").addEventListener("click", (e) => {
     const removeBtn = e.target.closest("[data-remove]");
     if (removeBtn) {
-      const id = removeBtn.dataset.remove;
       if (!confirm("¿Quitar este gasto?")) return;
-      state = { ...state, expenses: state.expenses.filter((x) => x.id !== id) };
-      save(state);
+      const id = removeBtn.dataset.remove;
+      updateActive((p) => ({ ...p, expenses: p.expenses.filter((x) => x.id !== id) }));
       render();
       toast("Gasto eliminado");
       return;
     }
     const editBtn = e.target.closest("[data-edit]");
-    if (editBtn) openEdit(editBtn.dataset.edit);
-  });
-
-  function openEdit(id) {
-    const expense = state.expenses.find((x) => x.id === id);
-    if (!expense) return;
-    $("#edit-id").value = expense.id;
-    $("#edit-amount").value = String(expense.amount).replace(".", ",");
-    $("#edit-note").value = expense.note || "";
-    $("#edit-date").value = dateKey(new Date(expense.createdAt));
-    const sel = $("#edit-category");
-    sel.innerHTML = CATEGORIES.map(
-      (c) =>
-        `<option value="${c.id}"${c.id === expense.category ? " selected" : ""}>${c.label}</option>`
-    ).join("");
-    $("#edit-error").hidden = true;
-    syncDateInputs();
-    addSheet.hidden = true;
-    addSheet.classList.remove("open");
-    openSheet(editSheet);
-  }
-
-  sheetBackdrop.addEventListener("click", closeSheets);
-  $("#edit-cancel").addEventListener("click", closeSheets);
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && (!addSheet.hidden || !editSheet.hidden)) closeSheets();
+    if (editBtn) {
+      const period = activePeriod(store);
+      const expense = period?.expenses.find((x) => x.id === editBtn.dataset.edit);
+      if (!expense) return;
+      $("#edit-id").value = expense.id;
+      $("#edit-amount").value = String(expense.amount).replace(".", ",");
+      $("#edit-note").value = expense.note || "";
+      $("#edit-date").value = dateKey(new Date(expense.createdAt));
+      $("#edit-category").innerHTML = CATEGORIES.map(
+        (c) =>
+          `<option value="${c.id}"${c.id === expense.category ? " selected" : ""}>${c.label}</option>`
+      ).join("");
+      $("#edit-error").hidden = true;
+      syncDateInputs();
+      openSheet(editSheet);
+    }
   });
 
   $("#edit-form").addEventListener("submit", (e) => {
@@ -1222,18 +1252,18 @@
       $("#edit-error").textContent = "Importe no válido.";
       return;
     }
-    const { min, max } = weekBoundsISO();
+    const { min, max } = periodBounds();
     const day = $("#edit-date").value;
     if (!day || day < min || day > max) {
       $("#edit-error").hidden = false;
-      $("#edit-error").textContent = "La fecha debe estar en esta semana.";
+      $("#edit-error").textContent = "La fecha debe estar en el periodo.";
       return;
     }
     const note = $("#edit-note").value.trim();
     const category = $("#edit-category").value;
-    state = {
-      ...state,
-      expenses: state.expenses.map((x) =>
+    updateActive((p) => ({
+      ...p,
+      expenses: p.expenses.map((x) =>
         x.id === id
           ? {
               ...x,
@@ -1244,43 +1274,26 @@
             }
           : x
       ),
-    };
-    save(state);
+    }));
     closeSheets();
     render();
     toast("Gasto actualizado");
   });
 
-  $("#btn-reset").addEventListener("click", () => {
-    if (!state.budget && !state.expenses.length) {
-      toast("Nada que reiniciar");
+  btnReset.addEventListener("click", () => {
+    const period = activePeriod(store);
+    if (!period) return;
+    if (!confirm("¿Vaciar este periodo? Se borrarán el tope y todos sus gastos. El periodo seguirá en el historial.")) {
       return;
     }
-    if (!confirm("¿Reiniciar la semana? Se borrarán el tope y todos los gastos actuales.")) {
-      return;
-    }
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch { /* ignore */ }
-    state = emptyState();
-    save(state);
+    updateActive((p) => ({ ...p, budget: null, expenses: [] }));
     budgetCollapsed = false;
     budgetInput.value = "";
-    expenseAmount.value = "";
-    expenseNote.value = "";
-    selectedCat = "comida";
     render();
-    toast("Semana reiniciada");
-    budgetInput.focus();
+    toast("Periodo vaciado");
   });
 
-  if (loaded.rolled) {
-    weekRollover.hidden = false;
-    weekRollover.textContent = "Nueva semana — fija el tope.";
-    weekRollover.classList.add("warn");
-  }
-
-  if (state.budget != null && state.budget > 0) budgetCollapsed = true;
+  if (activePeriod(store)?.budget) budgetCollapsed = true;
   render();
 })();
   </script>
