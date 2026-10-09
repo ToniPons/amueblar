@@ -94,9 +94,6 @@ a {
   letter-spacing: -0.055em;
   line-height: 0.92;
   color: var(--pine);
-  opacity: 0;
-  transform: translateY(18px);
-  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.08s forwards;
 }
 
 .headline {
@@ -108,9 +105,6 @@ a {
   letter-spacing: -0.035em;
   line-height: 1.15;
   color: var(--ink);
-  opacity: 0;
-  transform: translateY(14px);
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
 }
 
 .lede {
@@ -120,9 +114,6 @@ a {
   font-weight: 500;
   line-height: 1.45;
   color: var(--ink-soft);
-  opacity: 0;
-  transform: translateY(12px);
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.32s forwards;
 }
 
 .destinations {
@@ -130,9 +121,32 @@ a {
   flex-direction: column;
   gap: 0.15rem;
   border-top: 1px solid rgba(20, 32, 28, 0.12);
-  opacity: 0;
-  transform: translateY(10px);
-  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.44s forwards;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.08s forwards;
+  }
+
+  .headline {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
+  }
+
+  .lede {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.32s forwards;
+  }
+
+  .destinations {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.44s forwards;
+  }
 }
 
 .destination {
@@ -213,20 +227,8 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .atmosphere,
-  .atmosphere::before,
-  .brand,
-  .headline,
-  .lede,
-  .destinations {
+  .atmosphere::before {
     animation: none;
-  }
-
-  .brand,
-  .headline,
-  .lede,
-  .destinations {
-    opacity: 1;
-    transform: none;
   }
 
   .destination {
