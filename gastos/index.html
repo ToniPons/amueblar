@@ -1012,15 +1012,6 @@
       reportEmpty.hidden = true;
       reportBody.hidden = false;
 
-      const statusEl = $("#stat-status");
-      statusEl.textContent = report.exceeded
-        ? "Sí, te pasaste"
-        : report.totalSpent === 0
-          ? "Aún sin gastos"
-          : "Vas dentro del tope";
-      statusEl.className = `value ${report.exceeded ? "bad" : "ok"}`;
-      $("#stat-spent").textContent = `${formatEuro(report.totalSpent)} / ${formatEuro(report.budget)}`;
-
       if (report.ranOutOn) {
         $("#stat-ranout").textContent = report.ranOutOn.label;
         $("#stat-ranout").className = "value bad";
