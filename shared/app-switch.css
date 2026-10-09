@@ -1,4 +1,4 @@
-/* Shared Amueblar ↔ Parte app switcher — keep identical in both apps */
+/* Shared Amueblar ↔ Parte ↔ Tracker Gastos app switcher */
 .app-switch {
   --as-ink: #1a2c28;
   --as-muted: #4a5c58;
@@ -34,7 +34,7 @@
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.15;
