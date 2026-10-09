@@ -334,17 +334,30 @@
 
     .dock {
       position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 12px;
+      right: 12px;
       bottom: calc(14px + var(--safe-b));
-      width: min(520px, calc(100% - 24px));
+      width: auto;
+      max-width: 520px;
+      margin-inline: auto;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
       z-index: 20;
       animation: rise 0.5s 0.15s ease both;
     }
-    .dock .btn { min-height: 52px; box-shadow: var(--shadow); }
+    .dock .btn {
+      min-height: 52px;
+      box-shadow: var(--shadow);
+      padding: 0 12px;
+      font-size: 0.88rem;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    @media (max-width: 360px) {
+      .dock { gap: 6px; left: 10px; right: 10px; }
+      .dock .btn { font-size: 0.8rem; padding: 0 8px; }
+    }
 
     /* —— Capture sheet —— */
     .sheet-backdrop {
