@@ -1,4 +1,0 @@
-:HL["/amueblar/tracker-gastos/_next/static/chunks/0627aau66vsup.css","style"]
-2:[["children",{"s":"__PAGE__","h":160}]]
-1:[["children",{"s":"/_not-found","h":96,"c":"$Q2"}]]
-0:{"b":"2Y9OhdqA-BL1J9EwU-J6M","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
