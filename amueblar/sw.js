@@ -1,9 +1,9 @@
-const CACHE = 'amueblar-v24';
+const CACHE = 'amueblar-v25';
 const ASSETS = [
   './',
   './index.html',
   './css/app.css',
-  './shared/app-switch.css',
+  '../shared/home-link.css',
   './js/app.js',
   './js/db.js',
   './js/ui.js',
