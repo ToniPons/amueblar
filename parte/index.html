@@ -220,6 +220,75 @@
       animation: pulse-soft 1.8s ease infinite;
     }
 
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .status-badge.pendiente { background: rgba(20, 38, 40, 0.08); color: var(--ink-soft); }
+    .status-badge.comunicada { background: rgba(196, 165, 116, 0.32); color: #6e5124; }
+    .status-badge.en-revision { background: rgba(47, 107, 95, 0.14); color: var(--accent-2); }
+    .status-badge.en-reparacion { background: rgba(47, 107, 95, 0.22); color: #1a4a42; }
+    .status-badge.resuelta { background: rgba(47, 107, 95, 0.28); color: #134038; }
+    .status-badge.rechazada { background: rgba(155, 59, 50, 0.14); color: var(--danger); }
+
+    .status-chips,
+    .room-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .status-chip,
+    .room-chip {
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.85);
+      color: var(--ink-soft);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .status-chip.active,
+    .room-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #f7faf9;
+    }
+
+    .promotora-preview {
+      margin: 6px 0 0;
+      font-size: 0.8rem;
+      line-height: 1.35;
+      color: var(--ink-soft);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .promotora-preview strong {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
     .section-head { margin: 4px 0 12px; }
     .section-head h2 {
       margin: 0 0 4px;
@@ -568,28 +637,6 @@
       padding: 0 8px;
     }
 
-    .room-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .room-chip {
-      min-height: 38px;
-      padding: 0 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.85);
-      color: var(--ink-soft);
-      font-size: 0.82rem;
-      font-weight: 600;
-    }
-    .room-chip.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #f7faf9;
-    }
-
     .rooms-edit {
       display: flex;
       flex-wrap: wrap;
@@ -767,7 +814,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <div class="section-head" style="margin-top:0">
       <h2 id="sheet-title" style="font-size:1.3rem">Nueva incidencia</h2>
-      <p>Foto con la cámara del móvil, estancia y una nota breve.</p>
+      <p>Foto, estancia, estado y notas de la promotora cuando respondan.</p>
     </div>
 
     <!-- Native camera / gallery (same idea as Amueblar) -->
@@ -793,9 +840,17 @@
     <div class="room-chips" id="room-chips" role="group" aria-labelledby="room-label"></div>
     <select id="field-room" class="sr-only" tabindex="-1" aria-hidden="true"></select>
 
-    <label class="field"><span>Comentario</span>
+    <label class="field"><span>Descripción</span>
       <textarea id="field-comment" maxlength="400" placeholder="Ej. Rodapié mal sellado junto a la ventana"></textarea>
-      <div class="field-hint"><span>Opcional pero útil en el PDF</span><span id="comment-count">0/400</span></div>
+      <div class="field-hint"><span>Lo que se ve en el desperfecto</span><span id="comment-count">0/400</span></div>
+    </label>
+
+    <div class="field-label" id="status-label">Estado</div>
+    <div class="status-chips" id="status-chips" role="group" aria-labelledby="status-label"></div>
+
+    <label class="field"><span>Respuesta / notas de la promotora</span>
+      <textarea id="field-promotora" maxlength="600" placeholder="Ej. Aceptan reparar la semana del 14. Contacto: postventa@…"></textarea>
+      <div class="field-hint"><span>Para ir apuntando lo que te digan</span><span id="promotora-count">0/600</span></div>
     </label>
 
     <div class="sheet-actions">
@@ -825,6 +880,22 @@
     "Dormitorio principal", "Dormitorio 2",
     "Terraza", "Pasillo", "Entrada", "Otro"
   ];
+  const STATUSES = [
+    "Pendiente",
+    "Comunicada",
+    "En revisión",
+    "En reparación",
+    "Resuelta",
+    "Rechazada",
+  ];
+  const STATUS_CLASS = {
+    "Pendiente": "pendiente",
+    "Comunicada": "comunicada",
+    "En revisión": "en-revision",
+    "En reparación": "en-reparacion",
+    "Resuelta": "resuelta",
+    "Rechazada": "rechazada",
+  };
   const DB_NAME = "parte-incidencias";
   const DB_VERSION = 1;
   const STORE = "incidents";
@@ -836,7 +907,7 @@
 
   /** @type {IDBDatabase|null} */
   let db = null;
-  /** @type {Array<{id:string,room:string,comment:string,createdAt:number,updatedAt:number,photo:Blob}>} */
+  /** @type {Array<{id:string,room:string,comment:string,status:string,notaPromotora:string,createdAt:number,updatedAt:number,photo:Blob}>} */
   let incidents = [];
   let editingId = null;
   /** @type {Blob|null} */
@@ -847,6 +918,7 @@
   let listObjectUrls = [];
   let filterRoom = "Todas";
   let selectedRoom = DEFAULT_ROOMS[0];
+  let selectedStatus = "Pendiente";
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -869,6 +941,9 @@
     roomChips: $("room-chips"),
     comment: $("field-comment"),
     commentCount: $("comment-count"),
+    promotora: $("field-promotora"),
+    promotoraCount: $("promotora-count"),
+    statusChips: $("status-chips"),
     deleteBtn: $("btn-delete-incident"),
     saveMore: $("btn-save-more"),
     saveMoreRow: $("save-more-row"),
@@ -924,12 +999,44 @@
     return db.transaction(STORE, mode).objectStore(STORE);
   }
 
+  function normalizeIncident(raw) {
+    const status = STATUSES.includes(raw && raw.status) ? raw.status : "Pendiente";
+    return {
+      ...raw,
+      status,
+      notaPromotora: typeof (raw && raw.notaPromotora) === "string" ? raw.notaPromotora : "",
+      comment: typeof (raw && raw.comment) === "string" ? raw.comment : "",
+    };
+  }
+
   function getAllIncidents() {
     return new Promise((resolve, reject) => {
       const req = txStore("readonly").getAll();
-      req.onsuccess = () => resolve(req.result || []);
+      req.onsuccess = () => resolve((req.result || []).map(normalizeIncident));
       req.onerror = () => reject(req.error);
     });
+  }
+
+  function statusClass(status) {
+    return STATUS_CLASS[status] || "pendiente";
+  }
+
+  function renderStatusChips(active) {
+    selectedStatus = STATUSES.includes(active) ? active : "Pendiente";
+    els.statusChips.innerHTML = "";
+    for (const st of STATUSES) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "status-chip" + (st === selectedStatus ? " active" : "");
+      btn.textContent = st;
+      btn.setAttribute("aria-pressed", st === selectedStatus ? "true" : "false");
+      btn.addEventListener("click", () => renderStatusChips(st));
+      els.statusChips.appendChild(btn);
+    }
+  }
+
+  function updatePromotoraCount() {
+    els.promotoraCount.textContent = `${els.promotora.value.length}/600`;
   }
 
   function putIncident(item) {
@@ -1169,7 +1276,11 @@
         body.className = "incident-body";
         body.innerHTML = `
           <h4 class="incident-title"></h4>
-          <div class="meta"></div>
+          <div class="meta-row">
+            <span class="status-badge"></span>
+            <span class="meta"></span>
+          </div>
+          <p class="promotora-preview" hidden></p>
           <div class="incident-actions">
             <button type="button" class="linkish" data-edit>Editar</button>
             <button type="button" class="linkish danger" data-del>Eliminar</button>
@@ -1180,7 +1291,18 @@
         num.textContent = `${idx + 1}.`;
         title.appendChild(num);
         title.appendChild(document.createTextNode(incidentLabel(item, idx + 1)));
+        const badge = body.querySelector(".status-badge");
+        badge.textContent = item.status;
+        badge.classList.add(statusClass(item.status));
         body.querySelector(".meta").textContent = formatDate(item.createdAt);
+        const promo = body.querySelector(".promotora-preview");
+        if (item.notaPromotora) {
+          promo.hidden = false;
+          const lab = document.createElement("strong");
+          lab.textContent = "Promotora";
+          promo.appendChild(lab);
+          promo.appendChild(document.createTextNode(item.notaPromotora));
+        }
         body.querySelector("[data-edit]").addEventListener("click", () => openSheet(item.id));
         body.querySelector("[data-del]").addEventListener("click", () => confirmDelete(item.id));
         row.appendChild(img);
@@ -1349,7 +1471,9 @@
     editingId = id || null;
     setDraftPreview(null);
     els.comment.value = "";
+    els.promotora.value = "";
     updateCommentCount();
+    updatePromotoraCount();
     els.deleteBtn.hidden = !editingId;
     els.saveMore.hidden = !!editingId;
     els.sheetTitle.textContent = editingId ? "Editar incidencia" : "Nueva incidencia";
@@ -1359,11 +1483,15 @@
       const item = incidents.find((x) => x.id === editingId);
       if (!item) return;
       renderRoomChips(item.room);
+      renderStatusChips(item.status || "Pendiente");
       els.comment.value = item.comment || "";
+      els.promotora.value = item.notaPromotora || "";
       updateCommentCount();
+      updatePromotoraCount();
       setDraftPreview(item.photo);
     } else {
       renderRoomChips(meta.lastRoom || meta.rooms[0]);
+      renderStatusChips("Pendiente");
     }
 
     document.body.classList.add("sheet-open");
@@ -1397,6 +1525,8 @@
       return;
     }
     const comment = els.comment.value.trim();
+    const notaPromotora = els.promotora.value.trim();
+    const status = STATUSES.includes(selectedStatus) ? selectedStatus : "Pendiente";
     const now = Date.now();
     meta.lastRoom = room;
     saveMeta(meta);
@@ -1406,6 +1536,8 @@
       if (!item) return;
       item.room = room;
       item.comment = comment;
+      item.status = status;
+      item.notaPromotora = notaPromotora;
       item.photo = draftPhoto;
       item.updatedAt = now;
       await putIncident(item);
@@ -1421,6 +1553,8 @@
       id: uid(),
       room,
       comment,
+      status,
+      notaPromotora,
       photo: draftPhoto,
       createdAt: now,
       updatedAt: now,
@@ -1435,8 +1569,11 @@
       showToast("Guardada. Siguiente desperfecto");
       setDraftPreview(null);
       els.comment.value = "";
+      els.promotora.value = "";
       updateCommentCount();
+      updatePromotoraCount();
       renderRoomChips(room);
+      renderStatusChips("Pendiente");
       editingId = null;
       els.sheetTitle.textContent = "Nueva incidencia";
       els.deleteBtn.hidden = true;
@@ -1673,11 +1810,16 @@
           const label = incidentLabel(item, i + 1);
           const titleLines = doc.splitTextToSize(`${i + 1}. ${label}`, contentW);
           const titleH = titleLines.length * 5;
-          const blockH = titleH + 6 + (imgData ? drawH + 5 : 0) + 8;
+          const statusLine = `Estado: ${item.status || "Pendiente"}`;
+          const promoText = (item.notaPromotora || "").trim();
+          const promoLines = promoText
+            ? doc.splitTextToSize(`Promotora: ${promoText}`, contentW)
+            : [];
+          const metaBlockH = 5 + (promoLines.length ? promoLines.length * 4.2 + 2 : 0);
+          const blockH = titleH + 4 + metaBlockH + (imgData ? drawH + 5 : 0) + 8;
           if (y + blockH > pageH - 16) {
             doc.addPage();
             y = margin;
-            // Repeat room context on new page
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.setTextColor(106, 124, 126);
@@ -1694,12 +1836,21 @@
           doc.setFont("helvetica", "normal");
           doc.setFontSize(8.5);
           doc.setTextColor(106, 124, 126);
-          doc.text(formatDate(item.createdAt), margin, y);
+          doc.text(`${formatDate(item.createdAt)}  ·  ${statusLine}`, margin, y);
           y += 5;
 
           if (imgData) {
             doc.addImage(imgData, "JPEG", margin, y, drawW, drawH);
             y += drawH + 5;
+          }
+
+          if (promoLines.length) {
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(9);
+            doc.setTextColor(58, 79, 82);
+            doc.text(promoLines, margin, y);
+            y += promoLines.length * 4.2 + 2;
+            doc.setFont("helvetica", "normal");
           }
 
           doc.setDrawColor(220, 228, 226);
@@ -1853,6 +2004,12 @@
   els.comment.addEventListener("focus", () => {
     setTimeout(() => {
       els.comment.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+  });
+  els.promotora.addEventListener("input", updatePromotoraCount);
+  els.promotora.addEventListener("focus", () => {
+    setTimeout(() => {
+      els.promotora.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 300);
   });
 
