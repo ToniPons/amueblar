@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650;9..144,700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
   <style>
     :root {
       --ink: #142628;
@@ -1401,19 +1401,82 @@
     return y + lines.length * lineHeight;
   }
 
+  function getJsPdfCtor() {
+    if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+    if (typeof window.jsPDF === "function") return window.jsPDF;
+    return null;
+  }
+
+  const JSPDF_CDN_URLS = [
+    "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js",
+    "https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+  ];
+
+  let jspdfLoadPromise = null;
+
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-parte-jspdf="${url}"]`);
+      if (existing) {
+        if (getJsPdfCtor()) resolve();
+        else {
+          existing.addEventListener("load", () => resolve(), { once: true });
+          existing.addEventListener("error", () => reject(new Error("script error")), { once: true });
+        }
+        return;
+      }
+      const s = document.createElement("script");
+      s.src = url;
+      s.async = true;
+      s.dataset.parteJspdf = url;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("No se pudo cargar " + url));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureJsPdf() {
+    const ready = getJsPdfCtor();
+    if (ready) return ready;
+    if (!jspdfLoadPromise) {
+      jspdfLoadPromise = (async () => {
+        let lastErr = null;
+        for (const url of JSPDF_CDN_URLS) {
+          try {
+            await loadScript(url);
+            const ctor = getJsPdfCtor();
+            if (ctor) return ctor;
+          } catch (err) {
+            lastErr = err;
+          }
+        }
+        throw lastErr || new Error("jsPDF no disponible");
+      })().finally(() => {
+        if (!getJsPdfCtor()) jspdfLoadPromise = null;
+      });
+    }
+    return jspdfLoadPromise;
+  }
+
   async function exportPdf() {
     if (!incidents.length) {
       showToast("Añade al menos una incidencia");
       return;
     }
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-      showToast("No se pudo cargar jsPDF. Revisa la conexión e inténtalo de nuevo.");
+
+    setBusy(true, "Cargando generador PDF…");
+    let jsPDF;
+    try {
+      jsPDF = await ensureJsPdf();
+    } catch {
+      setBusy(false);
+      showToast("No se pudo cargar el generador PDF. Revisa la conexión e inténtalo de nuevo.");
       return;
     }
 
     setBusy(true, "Generando PDF…");
     try {
-      const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
