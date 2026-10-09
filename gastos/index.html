@@ -570,16 +570,9 @@
       <h2 class="section-title">Informe</h2>
       <div id="report-empty" class="empty" hidden>Fija un tope para ver el informe.</div>
       <div id="report-body" hidden>
-        <div class="report-grid" style="margin-bottom:1rem">
-          <div class="stat-card">
-            <p class="label">Estado</p>
-            <p class="value" id="stat-status"></p>
-            <p class="sub" id="stat-spent"></p>
-          </div>
-          <div class="stat-card">
-            <p class="label">Se agotó</p>
-            <p class="value" id="stat-ranout"></p>
-          </div>
+        <div class="stat-card" id="ranout-card" style="margin-bottom:1rem">
+          <p class="label">Se agotó</p>
+          <p class="value" id="stat-ranout"></p>
         </div>
 
         <div class="panel" style="margin-bottom:1rem" id="cat-panel" hidden>
