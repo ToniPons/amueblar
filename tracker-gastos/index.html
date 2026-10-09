@@ -1035,11 +1035,9 @@
       if (report.ranOutOn) {
         $("#stat-ranout").textContent = report.ranOutOn.label;
         $("#stat-ranout").className = "value bad";
-        $("#stat-ranout-sub").textContent = `Ahí el acumulado alcanzó o superó el presupuesto (${formatEuro(report.ranOutOn.cumulative)}).`;
       } else {
         $("#stat-ranout").textContent = "—";
         $("#stat-ranout").className = "value ok";
-        $("#stat-ranout-sub").textContent = "El acumulado sigue por debajo del tope semanal.";
       }
 
       const catPanel = $("#cat-panel");
