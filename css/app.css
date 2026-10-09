@@ -108,21 +108,32 @@ body::before {
 }
 
 .budget-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
   gap: 0.35rem;
+  align-items: stretch;
 }
 
 .budget-row .budget-card {
-  flex: 1 1 calc(50% - 1.6rem);
   min-width: 0;
 }
 
 .budget-row .budget-settings {
-  flex: 0 0 auto;
+  grid-column: 3;
+  grid-row: 1;
   align-self: center;
-  margin-left: auto;
+}
+
+.budget-row:has(#budget-cap-card:not([hidden])) {
+  grid-template-columns: 1fr 1fr auto;
+}
+
+.budget-row:has(#budget-cap-card:not([hidden])) .budget-cap-card {
+  grid-column: 1;
+}
+
+.budget-row:has(#budget-cap-card:not([hidden])) .budget-remain-card {
+  grid-column: 2;
 }
 
 .header-panel.over-budget {
